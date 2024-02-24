@@ -1,0 +1,3386 @@
+#+startup: indent
+#+startup: hidestars
+
+* Emacs setup
+#+begin_src emacs-lisp
+
+
+(defun srk/occur-open-buffers (regexp)
+  (interactive "sRegex: ")
+  (multi-occur-in-matching-buffers "." regexp t))
+
+(defun srk/eval-cider-eval-register-to-var ()
+  (interactive)
+  (let ((eval-string (get-register cider-eval-register))
+	(var-name (read-from-minibuffer "Enter variable name: ")))
+    (let ((cider-code-string (concat "(def " var-name " " eval-string ")")))
+      (cider-interactive-eval cider-code-string))))
+
+(setq mac-command-modifier 'super)
+
+(when (eq system-type 'darwin)
+  (setq mac-option-modifier 'meta))
+	  
+(setq safe-local-variable-values
+      '((eval when
+	      (fboundp 'rainbow-mode)
+	      (rainbow-mode 1))
+	(eval progn
+	      (make-variable-buffer-local 'cider-jack-in-nrepl-middlewares)
+	      (add-to-list 'cider-jack-in-nrepl-middlewares "shadow.cljs.devtools.server.nrepl/middleware"))
+	(cider-cljs-lein-repl . "(do (user/run) (user/browser-repl))")
+	(cider-refresh-after-fn . "com.stuartsierra.component.repl/start")
+	(cider-refresh-before-fn . "com.stuartsierra.component.repl/stop")))
+      
+(advice-add 'risky-local-variable-p :override #'ignore)
+
+(defun my-lisp-mode-hook ()
+  (hs-minor-mode)
+  (local-set-key (kbd "<backtab>") 'hs-show-all) ;; ctrl+shift+=
+  (local-set-key (kbd "C-S-<iso-lefttab>") 'hs-hide-all) ;; ctrl+shift+-
+  (local-set-key (kbd "TAB") 'hs-toggle-hiding))
+
+
+(add-hook 'lisp-mode-hook 'my-lisp-mode-hook)
+(add-hook 'emacs-lisp-mode-hook 'my-lisp-mode-hook)
+(add-hook 'clojure-mode-hook 'my-lisp-mode-hook)
+
+(defun srk/escape-double-quote (string)
+  "Escape double quotes in STRING."
+  (replace-regexp-in-string "\"" "\\\\\"" string))
+
+(defun srk/escape-quotes-yank ()
+  "Yank the latest kill-ring entry at point with single and double quotes escaped."
+  (interactive)
+  (when kill-ring
+    (insert (srk/escape-double-quote (current-kill 0)))))
+
+(defun srk/org-timer-start-minutes (minutes)
+    (interactive "P")
+    (org-timer-start (* 60 minutes)))
+
+(use-package sparql-mode
+  :straight t
+  :after org-mode
+  :config
+  (add-to-list 'auto-mode-alist '("\\.sparql$" . sparql-mode))
+  (add-to-list 'auto-mode-alist '("\\.rq$" . sparql-mode))
+  (add-hook 'sparql-mode-hook 'company-mode)
+  (add-to-list 'org-babel-load-languages '(sparql . t) )  )
+
+(use-package yaml-mode
+  :straight t
+  :config
+  (add-to-list 'auto-mode-alist '("\\.yml\\'" . yaml-mode))
+  (add-to-list 'auto-mode-alist '("\\.yaml\\'" . yaml-mode))
+  )
+
+(defun srk/cider-eval-last-sexp-to-kill-ring ()
+  (interactive)
+  (kill-new  (car (call-interactively 'cider-eval-last-sexp))))
+
+
+(eval-after-load "term"
+  '(define-key term-raw-map (kbd "C-c C-y") 'term-paste))
+
+(eval-after-load "ansi-term"
+  '(define-key ansi-term-raw-map (kbd "C-c C-y") 'term-paste))
+(require 'generic-x)
+
+(defun srk/reload-dir-locals-for-current-buffer ()
+  "reload dir locals for the current buffer"
+  (interactive)
+  (let ((enable-local-variables :all))
+    (hack-dir-local-variables-non-file-buffer)))
+
+(define-generic-mode 
+    'httphl-mode                       ;; name of the mode
+  nil                               ;; comments delimiter
+  nil ;;'("function" "var" "return")      ;; some keywords
+  '(("POST" . 'font-lock-constant-face)
+    ("GET" . 'font-lock-constant-face)
+    ("Host:" . 'font-lock-keyword-face)
+    ("host:" . 'font-lock-keyword-face)
+    ("Content-Type:" . 'font-lock-keyword-face)
+    ("content-type:" . 'font-lock-keyword-face)
+    ("Accept:" . 'font-lock-keyword-face)
+    ("accept:" . 'font-lock-keyword-face);; some operators
+    ("User-Agent:" . 'font-lock-keyword-face)
+    ("user-agent:" . 'font-lock-keyword-face)
+    ("Authorization:" . 'font-lock-keyword-face)
+    ("Connection:" . 'font-lock-keyword-face)
+    ("connection:" . 'font-lock-keyword-face)
+    ("HTTP/1.0" . 'font-lock-type-face)
+    ("HTTP/1.1" . 'font-lock-type-face)
+    ("HTTP/2" . 'font-lock-type-face)
+    ("HTTP/3" . 'font-lock-type-face)
+    ("Bearer" . 'font-lock-variable-name-face)
+    ("Mozilla" . 'font-lock-function-name-face)
+    ("X11" . 'font-lock-function-name-face)
+    ("Linux x86_64" . 'font-lock-function-name-face)
+    ("AppleWebKit" . 'font-lock-function-name-face)
+    ("KHTML" . 'font-lock-function-name-face)
+    ("Gecko" .'font-lock-function-name-face)
+    ("Chrome" . 'font-lock-function-name-face)
+    ("Safari" . 'font-lock-function-name-face)
+    ("Accept-Language:" . 'font-lock-keyword-face)
+    ("accept-language:" . 'font-lock-keyword-face)
+    ("Accept-Encoding:" . 'font-lock-keyword-face)
+    ("accept-encoding:" . 'font-lock-keyword-face)
+    ("Content-Length:" . 'font-lock-keyword-face)
+    ("content-length:" . 'font-lock-keyword-face)
+    ("Pragma:" . 'font-lock-keyword-face)
+    ("pragma:" . 'font-lock-keyword-face)
+    ("accept:" . 'font-lock-keyword-face)
+    ("Accept-Encoding:" . 'font-lock-keyword-face)
+    ("accept-encoding:" . 'font-lock-keyword-face)
+    ("Content-Disposition:" . 'font-lock-keyword-face)
+    ("content-disposition:" . 'font-lock-keyword-face)
+    ("Content-Transfer-Encoding:" . 'font-lock-keyword-face)
+;;  ("content-transfer-encoding:" . 'font-lock-keyword-face)
+    ("" . 'font-lock-keyword-face)
+    ("Cache-Control:" . 'font-lock-keyword-face)
+    ("cache-control:" . 'font-lock-keyword-face)
+    )     ;; a built-in 
+  '("\\.http$")                    ;; files that trigger this mode
+  "Simple custom http request highlighting mode"     ;; doc string
+  )
+
+;; (font-lock-type-face            (:foreground 8bs-main-orange))
+;; (font-lock-variable-name-face   (:foreground 8bs-red1))
+;; (font-lock-warning-face         (:foreground 8bs-red1))
+;; (font-lock-keyword-face         (:foreground 8bs-main-teal))
+;; (font-lock-function-name-face   (:foreground 8bs-main-pink))
+;; (font-lock-builtin-face         (:foreground 8bs-main-teal))
+;; (font-lock-constant-face        (:foreground 8bs-green1))
+;; (font-lock-string-face           (:foreground 8bs-main-pink))
+;; (font-lock-comment-face         (:foreground 8bs-gray3))
+
+
+(setq dired-listing-switches "-lah")
+(setq native-comp-async-report-warnings-errors nil)
+(defun http-twiddle-tls-toggle ()
+  "Toggle TLS (https) on and off."
+  (interactive)
+  (setq http-twiddle-tls (not http-twiddle-tls))
+  (message (if http-twiddle-tls
+	       "http-twiddle TLS (https) on"
+	     "http-twiddle TLS (https) off")))
+(require 'ibuf-ext)
+(add-to-list 'ibuffer-never-show-predicates "^\\*")
+(global-set-key (kbd "C-x C-b") 'ibuffer)
+
+#+end_src 
+(use-package clojure-essential-ref-nov
+:init
+(setq clojure-essential-ref-nov-epub-path "~/Downloads/Clojure_The_Essential_Reference_v29_MEAP.epub"))
+** Dummy
+  #+begin_src emacs-lisp
+
+  #+end_src
+** Language detection
+  #+begin_src emacs-lisp
+ (use-package language-detection
+   :straight t)
+  #+end_src
+** Iedit
+  #+begin_src emacs-lisp
+ (use-package iedit
+   :straight t)
+  #+end_src
+** Spacious-padding
+  #+begin_src emacs-lisp
+(use-package spacious-padding
+  :straight t
+  :config
+  (setq spacious-padding-subtle-mode-line t)
+  (setq spacious-padding-subtle-mode-line
+	'(:mode-line-active error :mode-line-inactive "gray20"))
+  :hook (after-init . spacious-padding-mode))
+  #+end_src
+
+** File shortcuts
+  #+begin_src emacs-lisp
+(defun srk/create-named-command (name body)
+  "Create a named command given a symbol NAME and function BODY."
+  (defalias name
+    `(lambda (&optional arg)
+       "Named command."
+       (interactive "P")
+       ,@body)))
+
+(defun srk/find-or-switch-file (key buffer-name file-path)
+  "Create or update a global keybinding to either switch to buffer 
+   if it exists or find a file given its path."
+  (let* ((command-name (intern (concat "find-or-switch-" 
+                                       (file-name-nondirectory file-path))))
+         (command (srk/create-named-command command-name
+                      `((if (get-buffer ,buffer-name)
+                            (switch-to-buffer ,buffer-name)
+                            (find-file ,file-path))))))
+    (global-set-key (kbd key) command)))
+
+(srk/find-or-switch-file "C-c f n" "notes.org" "~/notes/notes.org")
+(srk/find-or-switch-file "C-c f t" "tasks.org" "~/notes/doing-shit/tasks.org")
+(srk/find-or-switch-file "C-c f i" "inbox.org" "~/notes/doing-shit/inbox.org")
+(srk/find-or-switch-file "C-c f m" "myinit.org" "~/.config/emacs/myinit.org")
+(srk/find-or-switch-file "C-c f d" "daily.org" "~/notes/doing-shit/daily.org")
+(srk/find-or-switch-file "C-c f c" "" "~/.clojure/deps.edn")
+(srk/find-or-switch-file "C-c f p" "repl.clj" "~/kpsystem/panorama/src/geoserver/repl.clj")
+
+
+
+  #+end_src
+
+** Keyfreq
+  #+begin_src emacs-lisp
+  (use-package keyfreq
+    :straight t
+    :config
+    (keyfreq-mode 1)
+    (keyfreq-autosave-mode 1)
+    (setq keyfreq-excluded-commands
+	  '(self-insert-command
+	    org-self-insert-command
+            forward-char
+	    backward-char
+	    previous-line
+	    next-line)))
+  #+end_src
+
+  ** Ement.el
+  #+begin_src emacs-lisp
+  (use-package ement
+    :straight t)
+
+
+
+  #+end_src
+** 1password
+  Follow these steps:
+
+  1. Start by choosing your account from the minibuffer. The options are "8-bit-sheep" or "Family". The URL for "8-bit-sheep" is "8-bit-sheep.1password.com", and for "Family", it's "my.1password.com".
+
+  2. Once you've chosen the account, run the shell command `op item ls --format=json --account my.1password.com`. Be sure to replace the `my.1password.com` URL from the command with the URL of the account you've chosen. 
+
+  3. This command will return a JSON with a structure similar to the example provided. 
+  [
+    {
+      "id": "wgwdd",
+      "title": "Twitter",
+      "version": 2,
+      "vault": {
+	"id": "xxd",
+	"name": "Social"
+      },
+    {
+      "id": "hnyrmsdi",
+      "title": "Yesper admin login",
+      "version": 1,
+      "vault": {
+	"id": "khun",
+	"name": "Vault1"
+      },
+      "category": "LOGIN",
+      "last_edited_by": "ddd",
+      "created_at": "2023-09-18T07:22:24Z",
+      "updated_at": "2023-09-18T07:22:24Z",
+      "additional_information": "s@s.s",
+      "urls": [
+	{
+	  "label": "website",
+	  "primary": true,
+	  "href": "https://w.w.fi"
+	}
+      ]
+    },]
+
+  4. Next, you'll be asked to choose a vault interactively. The options are given in the 'name' field under 'vault' in the JSON items. You'll be only offered unique options ie the list is deduplicated.
+
+  5. After the vault is chosen, select an item interactively. The options are given in the 'title' field in the JSON items belonging to the selected vault.
+
+  6. Using the values of the chosen account-url, vault, and item, the function will construct a CLI command following this structure: `op read op://<vault>/<item>/password --account <account-url>`.
+
+  7. This command is then run in a shell, and the output is pasted into the buffer where the function was called.```
+
+  Remember to replace "<account-url>", "<vault>", and "<item>" with the actual account URL, vault, and item you've chosen.
+
+  This function helps you interactively choose elements from your 1password account and generate a command to read the password of a specific item. It assists in the automation of password retrieval, saving time and increasing efficiency.
+
+  #+begin_src emacs-lisp
+
+    ;; (use-package auth-source-1password
+    ;;   :straight t
+    ;;   :config
+    ;;     (auth-source-1password-enable))
+
+    ;; (auth-source-pick-first-password :vault "KPsystem" :host "dan-johansson.eu.auth0.com" :user "admin@kpsystem.se")
+
+    (require 'json)
+
+    (defun srk/1password-choose-field ()
+      "Fetch and select account, vault and item from 1password."
+      (let* ((accounts '(("8-bit-sheep" . "8-bit-sheep.1password.com")
+			 ("Family" . "my.1password.com")))
+	     (account (cdr (assoc (completing-read "Choose an account: " 
+						   (mapcar 'car accounts)) 
+				  accounts)))
+	     (json-raw (shell-command-to-string 
+			(format "op item ls --format=json --account %s" account)))
+	     (json-data (json-read-from-string json-raw))
+	     (vaults (delete-dups 
+		      (mapcar (lambda (item) 
+				(cdr (assoc 'name (assoc 'vault item)))) 
+			      json-data)))
+	     (chosen-vault (completing-read "Choose a vault: " vaults))
+	     (items (delq nil 
+			  (mapcar (lambda (item)
+				    (when (string= chosen-vault 
+						   (cdr (assoc 'name 
+							       (assoc 'vault item))))
+				      (cdr (assoc 'title item))))
+				  json-data))))
+	(list
+	 account
+	 (completing-read "Choose an item: " items)
+	 chosen-vault)))
+
+    (defun srk/1password-handle-field (handler field)
+      (let* ((chosen (srk/1password-choose-field))
+	     (account (car chosen))
+	     (chosen-item (cadr chosen))
+	     (chosen-vault (caddr chosen))
+	     (chosen-field-raw
+	      (shell-command-to-string 
+	       (format "op read op://%s/%s/%s --account %s" 
+		       (shell-quote-argument chosen-vault)
+		     (shell-quote-argument chosen-item)
+		     field account)))
+	   (chosen-field (replace-regexp-in-string "\n" "" chosen-field-raw)))
+	(funcall handler chosen-field)))
+
+    (defun srk/1password-fetch-pw-insert ()
+      "Interactively fetch password from 1password."
+      (interactive)
+      (srk/1password-handle-field
+       (lambda (chosen-password) (insert chosen-password)) "password"))
+
+    (defun srk/1password-fetch-pw-kill ()
+      "Interactively fetch password from 1password."
+      (interactive)
+      (srk/1password-handle-field
+       (lambda (chosen-password) (kill-new chosen-password)) "password"))
+
+    (defun srk/1password-fetch-username-insert ()
+      "Interactively fetch password from 1password."
+      (interactive)
+      (srk/1password-handle-field
+       (lambda (chosen-username) (insert chosen-username)) "username"))
+
+    (defun srk/1password-fetch-username-kill ()
+      "Interactively fetch password from 1password."
+      (interactive)
+      (srk/1password-handle-field
+       (lambda (chosen-username) (kill-new chosen-username)) "username"))
+
+  #+end_src
+
+** Free keys
+  #+begin_src emacs-lisp
+  (use-package free-keys
+    :straight t)
+  #+end_src
+
+** Vterm
+  #+begin_src emacs-lisp
+  (use-package vterm
+      :ensure t)
+  #+end_src
+
+** Golden ratio
+  #+begin_src emacs-lisp
+  (use-package golden-ratio
+    :straight t
+    :config
+    (golden-ratio-mode 1)
+    (add-to-list 'golden-ratio-extra-commands 'ace-window))
+  #+end_src
+
+** Visible mark
+  #+begin_src emacs-lisp
+  (defface visible-mark-active
+     '((((type tty) (class mono)))
+       (t (:background "magenta"
+	   :foreground "black"
+	   ))) "")
+  (setq visible-mark-face1 '((t (:background "light salmon" :foreground "black"))))
+
+  (setq visible-mark-face2 '((t (:background "light goldenrod" :foreground "black"))))
+
+  (setq visible-mark-max 2)
+    (setq visible-mark-faces `(visible-mark-face1 visible-mark-face2))
+  (use-package visible-mark
+    :straight t
+    :config (global-visible-mark-mode 1))
+  #+end_src
+
+** Clay
+  #+begin_src emacs-lisp
+    (require 'url)
+
+    ;; (defun read-url-and-eval (url)
+    ;;   "Fetch the file from URL and evaluate it as elisp code. Use with
+    ;; care."
+    ;;   (let ((buffer (url-retrieve-synchronously url)))
+    ;;     (if buffer
+    ;; 	  (with-current-buffer buffer
+    ;; 	    (goto-char (point-min))
+    ;; 	    (re-search-forward "^$")
+    ;; 	    (delete-region (point) (point-min))
+    ;; 	    (eval-buffer))
+    ;; 	(error "Failed to fetch code from URL %S" url))))
+
+    ;; (read-url-and-eval "https://raw.githubusercontent.com/scicloj/clay/main/clay.el")
+  #+end_src
+
+** Alert
+  #+begin_src emacs-lisp
+
+    ;; (use-package alert
+    ;;   :config
+    ;;   (if (eq system-type 'darwin)
+    ;; 	(setq
+    ;; 	 ;; alert-default-style 'notifier
+    ;; 	 alert-default-style 'osx-notifier
+    ;; 	 )))
+
+    ;; ;; adding sound notification to the osx notifier
+    (eval-after-load 'alert
+      '(defun alert-osx-notifier-notify (info)
+         (apply #'call-process "osascript" nil nil nil "-e"
+    	      (list (format "display notification %S with title %S sound name %S"
+    			    (alert-encode-string (plist-get info :message))
+    			    (alert-encode-string (plist-get info :title))
+    			    (alert-encode-string "Purr"))))
+         (alert-message-notify info)))
+
+      ;; (alert "This is an alert" :severity 'high)
+      ;; (alert "This is an alert" :title "My Alert" :category 'debug)
+
+
+  #+end_src
+** rainbow-delimiters
+  #+begin_src emacs-lisp
+  (use-package rainbow-delimiters
+    :straight t 
+    :defer t
+    :init
+    (progn
+      (add-hook 'clojure-mode-hook #'rainbow-delimiters-mode)))
+  #+end_src
+
+** Rainbow mode
+  #+begin_src emacs-lisp
+  (use-package rainbow-mode
+    :straight t)
+  #+end_src
+
+** Slack
+  #+begin_src emacs-lisp
+  (use-package slack
+    :straight (slack :type git :host github :repo "Konubinix/emacs-slack")
+    :commands (slack-start)
+    :init
+    (setq slack-buffer-emojify t) ;; if you want to enable emoji, default nil
+    (setq slack-prefer-current-team t)
+    (setq slack-render-image-p t)
+
+    :config
+    (defun srk/slack-get-user-emoji (name)
+      (let* ((profiles (slack-user-names (slack-team-select)))
+	     (profile (assoc name profiles))
+             (profile-properties (cdr profile))
+             (status-profile (plist-get profile-properties :profile))
+             (status-emoji (plist-get status-profile :status_emoji)))
+	status-emoji))
+     (url-cookie-store "d" "xoxd-xPC4VnNqbnlK%2F%2Fyk%2BWmFlbEZTNqX63sJawmvoaVD05Hdpq6z8kwPFZiKuJVQTmMFhvn2Gr8yZKqxiO%2FqwhTNDshQxaTl5yej5JGriDtW1pwwFR4ttM2JdpF7p48Smoktgw%2FsX5Q2J4h1sdyI7N1XpwLWdbUzn02Zvfam%2FCaKhpALDij9SjQbbz0M" nil ".slack.com" "/" t)
+    (slack-register-team
+     :name "kpsystem"
+     :default t
+     :cookie "xoxd-xPC4VnNqbnlK%2F%2Fyk%2BWmFlbEZTNqX63sJawmvoaVD05Hdpq6z8kwPFZiKuJVQTmMFhvn2Gr8yZKqxiO%2FqwhTNDshQxaTl5yej5JGriDtW1pwwFR4ttM2JdpF7p48Smoktgw%2FsX5Q2J4h1sdyI7N1XpwLWdbUzn02Zvfam%2FCaKhpALDij9SjQbbz0M"
+     :token "xoxc-363964592738-2685600891506-5147313291282-f474874ba9d26422b4c04c87ade9b1bd006a6346b90daea40d54549ec0ba6f87"
+     :subscribed-channels '(general panorama utveckling random bbucket)
+     :full-and-display-names t)
+    (global-set-key (kbd "C-c s r") 'slack-select-rooms)
+    (global-set-key (kbd "C-c s s") 'slack-user-set-status)
+    (global-set-key (kbd "C-c s e") 'slack-message-edit)
+    (global-set-key (kbd "C-c s a") 'slack-message-add-reaction)
+    (global-set-key (kbd "C-c s i") 'slack-insert-emoji))
+
+  #+end_src
+
+** GPTel
+  #+begin_src emacs-lisp
+    (use-package gptel
+		 :straight t
+		 :init
+		 (setq-default gptel-model "gpt-3.5-turbo"
+			       gptel-playback t
+			       gptel-default-mode 'org-mode
+			       gptel-api-key  (getenv "OPENAI_API_KEY")))
+
+  #+end_src
+
+** discord-emacs
+  #+begin_src emacs-lisp
+  ;; (use-package discord-emacs
+  ;;  :straight (discord-emacs :type git :host github :repo "simmsb/discord-emacs"))
+  #+end_src
+
+** GPT helper functions
+  #+begin_src emacs-lisp
+  (use-package gpt-helper
+    :straight (gpt-helper :type git :host github :repo "skallinen/gpt-helper")
+    :after (request))
+  #+end_src
+
+** CRDT
+  #+begin_src emacs-lisp
+  (use-package crdt
+    :straight t
+    :init
+    (setq crdt-tuntox-executable "/usr/bin/tuntox"
+	  crdt-use-tuntox t))
+  #+end_src
+
+** Mastodon
+  #+begin_src emacs-lisp
+  (use-package mastodon
+    :straight t
+    :config
+    (setq mastodon-instance-url "https://mastodon.social"
+	  mastodon-active-user "sakalli"))
+  #+end_src
+
+** Clojure essential ref nov
+  #+begin_src emacs-lisp
+  (use-package clojure-essential-ref-nov
+    :straight t
+    :init
+    (setq clojure-essential-ref-nov-epub-path "~/downloads/Clojure_The_Essential_Reference_v31.epub"))
+
+  #+end_src
+** Thing At Point
+  #+begin_src emacs-lisp
+  (use-package thingatpt
+    :straight t
+    :config
+    (defun srk/clojure-books-selection-occur ()
+      (interactive)
+      (if mark-active
+	  (let (
+		(selection (buffer-substring-no-properties (region-beginning) (region-end))))
+	    (if (= (length selection) 0)
+		(message "no selection!")
+	      (pdf-occur-search
+	       '("~/downloads/Clojure_The_Essential_Reference_v31.pdf"
+		 "~/cynthia-hdd3/Dropbox/Apps/Rakuten Kobo/The Joy of ClojureSecond Edition/The_Joy_of_Clojure_Second_Edition.pdf")
+	       selection))
+	    )
+	(error "mark not active")))
+
+    (defun srk/clojure-books-symbol-occur nil
+      (interactive)
+      (let ((needle (first (last (split-string (symbol-name (symbol-at-point)) "/"))))) 
+	(pdf-occur-search
+	 '("~/downloads/Clojure_The_Essential_Reference_v31.pdf"
+	   "~/cynthia-hdd3/Dropbox/Apps/Rakuten Kobo/The Joy of Clojure Second Edition/The_Joy_of_Clojure_Second_Edition.pdf")
+	 needle)))
+
+    (defun srk/cer-occur-index nil
+      (interactive)
+      (let ((needle (first (last (split-string (symbol-name (symbol-at-point)) "/"))))) 
+	(pdf-occur-search
+	 '(("~/downloads/Clojure_The_Essential_Reference_v31.pdf" . (1116 . 0)) )
+	 needle)))
+
+    (defun srk/joy-occur-index nil
+      (interactive)
+      (let ((needle (first (last (split-string (symbol-name (symbol-at-point)) "/"))))) 
+	(pdf-occur-search
+	 '(("~/cynthia-hdd3/Dropbox/Apps/Rakuten Kobo/The Joy of Clojure Second Edition/The_Joy_of_Clojure_Second_Edition.pdf" . (502 . 0)) )
+	 needle))))
+
+  #+end_src
+
+** Neil
+  #+begin_src emacs-lisp
+  (use-package neil
+    :straight t
+    :config
+    (setq neil-inject-dep-to-project-p t))
+  #+end_src
+** Http twiddle
+  #+begin_src emacs-lisp
+  (use-package http-twiddle
+    :straight t
+    :config
+    (setq http-twiddle-tls t))
+
+  #+end_src
+** w3m-emacs
+  #+begin_src emacs-lisp
+  (use-package w3m
+    :straight t)
+  #+end_src
+** Which key
+  #+begin_src emacs-lisp
+  (use-package which-key
+    :straight t
+    :config
+    (which-key-mode))
+  #+end_src
+** Expand Region
+  #+begin_src emacs-lisp
+  (use-package expand-region
+    :straight t
+    :bind ("C-=" . er/expand-region))
+  #+end_src
+
+** Autothemer
+  #+begin_src emacs-lisp
+  (use-package autothemer
+    :straight t)    
+
+  #+end_src
+
+** Hydra
+  #+begin_src emacs-lisp
+  (use-package hydra
+    :straight t)
+
+  #+end_src
+
+** Org mode
+*** Installing org mode packages
+    Note that org is loaded in the initi.el file so that the built in version can be overruled.
+    #+begin_src emacs-lisp
+(setq org-cite-global-bibliography '("/home/sakalli/notes/bibliography/library.bib"))
+
+(add-to-list
+ 'org-src-lang-modes '("plantuml" . plantuml))
+
+(add-to-list 'org-babel-load-languages '(shell . t))
+
+(add-to-list 'org-babel-load-languages '(clojure . t))
+
+(setq org-modules '(
+		    org-habit
+		    ;;org-bbdb
+		    ;;org-gnus
+		    org-info
+		    org-jsinfo
+		    org-mouse
+		    org-protocol
+		    org-eal
+		    ))
+
+;; (use-package org-noter-pdftools
+;;   :straight t 
+;;   :after org-noter
+;;   :config
+;;   ;; Add a function to ensure precise note is inserted
+;;   (defun org-noter-pdftools-insert-precise-note (&optional toggle-no-questions)
+;;     (interactive "P")
+;;     (org-noter--with-valid-session
+;;      (let ((org-noter-insert-note-no-questions (if toggle-no-questions
+;; 						   (not org-noter-insert-note-no-questions)
+;; 						 org-noter-insert-note-no-questions))
+;; 	   (org-pdftools-use-isearch-link t)
+;; 	   (org-pdftools-use-freestyle-annot t))
+;;        (org-noter-insert-note (org-noter--get-precise-info)))))
+
+;;   ;; fix https://github.com/weirdNox/org-noter/pull/93/commits/f8349ae7575e599f375de1be6be2d0d5de4e6cbf
+;;   (defun org-noter-set-start-location (&optional arg)
+;;     "When opening a session with this document, go to the current location.
+;; 	      With a prefix ARG, remove start location."
+;;     (interactive "P")
+;;     (org-noter--with-valid-session
+;;      (let ((inhibit-read-only t)
+;; 	   (ast (org-noter--parse-root))
+;; 	   (location (org-noter--doc-approx-location (when (called-interactively-p 'any) 'interactive))))
+;;        (with-current-buffer (org-noter--session-notes-buffer session)
+;; 	 (org-with-wide-buffer
+;; 	  (goto-char (org-element-property :begin ast))
+;; 	  (if arg
+;; 	      (org-entry-delete nil org-noter-property-note-location)
+;; 	    (org-entry-put nil org-noter-property-note-location
+;; 			   (org-noter--pretty-print-location location))))))))
+;;   (with-eval-after-load 'pdf-annot
+;;     (add-hook 'pdf-annot-activate-handler-functions #'org-noter-pdftools-jump-to-note)))
+
+
+;; (use-package org-pdftools
+;;   :straight t 
+;;   :hook (org-mode . org-pdftools-setup-link))
+;;(remove-hook 'org-mode-hook 'org-pdftools-setup-link)
+
+
+(when (not(eq system-type 'darwin))
+  (use-package ob-plantuml
+    :straight nil
+    :after modes/plantuml
+    :config
+    (setq org-plantuml-jar-path "/home/sakalli/plantuml.jar")
+    (add-to-list 'org-babel-load-languages '(plantuml . t)))
+  )
+
+
+
+(use-package ob-clojurescript
+  :straight t )
+;; org-babel-execute:ditaa: Could not find ditaa.jar at /nix/store/rq906nyha88s123pvrjcdsw0izzmgdwk-emacs-26.2/share/emacs/26.2/lisp/contrib/scripts/ditaa.jar
+;; user-error: Minibuffer window is not active
+
+
+(use-package racket-mode
+  :straight t )
+
+(defhydra org-hydra (global-map "s-c")
+  "org structure"
+  ("C-n"         outline-next-visible-heading)
+
+
+  ("C-p"     outline-previous-visible-heading)
+  ("C-u"     outline-up-heading)
+  ("C-<"     outline-promote)
+  ("C->"     outline-demote)
+
+  ("U"       org-shiftmetaup)
+  ("D"       org-shiftmetadown)
+  ("L"       org-shiftmetaleft)
+  ("R"       org-shiftmetaright)
+
+  ("d"       org-metadown)
+  ("u"       org-metaup)
+  ("r"       org-metaright)
+  ("l"       org-metaleft)
+
+  ("m"       org-meta-return)
+  ("RET"     org-meta-return)
+
+  ("C-a"     org-archive-subtree-default)
+  ("C-b"     org-toggle-checkbox)
+  ("C-c"     org-columns)
+  ("C-d"     org-clock-display)
+  ("C-e"     org-clock-modify-effort-estimate)
+  ("C-f"     org-emphasize)
+  ("TAB"     org-clock-in)
+  ("C-j"     org-clock-goto)
+  ("C-l"     org-latex-preview)
+  ;;    ("C-n"     org-next-link)
+  ("C-o"     org-clock-out)
+  ;;    ("C-p"     org-previous-link)
+  ("C-q"     org-clock-cancel)
+  ("C-r"     org-toggle-radio-button)
+  ("C-t"     org-toggle-time-stamp-overlays)
+  ;;    ("C-u"     org-dblock-update)
+  ("C-v"     org-toggle-inline-images)
+  ("C-w"     org-cut-special)
+  ("C-x"     org-clock-in-last)
+  ("C-y"     org-paste-special)
+  ("C-z"     org-resolve-clocks)
+  ("!"       org-reload)
+  (","       org-timer-pause-or-continue)
+  ("-"       org-timer-item)
+  ("."       org-timer)
+  ("0"       org-timer-start)
+  (";"       org-timer-set-timer)
+  ("<"       org-agenda-set-restriction-lock)
+  (">"       org-agenda-remove-restriction-lock)
+  ("A"       org-archive-to-archive-sibling)
+  ("E"       org-inc-effort)
+  ("G"       org-feed-goto-inbox)
+  ("I"       org-info-find-node)
+  ("M"       org-insert-todo-heading)
+  ("P"       org-set-property-and-value)
+  ("["       org-reftex-citation)
+  ("\\"       org-toggle-pretty-entities)
+  ("_"       org-timer-stop)
+  ("a"       org-toggle-archive-tag)
+  ("b"       org-tree-to-indirect-buffer)
+  ("c"       org-clone-subtree-with-time-shift)
+  ;;    ("d"       org-insert-drawer)
+  ("e"       org-set-effort)
+  ("f"       org-footnote-action)
+  ("g"       org-feed-update-all)
+  ("o"       org-toggle-ordered-property)
+  ("p"       org-set-property)
+  ("q"       org-toggle-tags-groups)
+  ("v"       org-copy-visible)
+  ("x"       org-dynamic-block-insert-dblock))
+    #+end_src
+
+*** Org-ref Todo
+    #+begin_src emacs-lisp
+
+      ;; (use-package reftex
+      ;;   :straight t 
+      ;;   :commands turn-on-reftex
+      ;;   :init
+      ;;   (progn
+      ;; 	(setq reftex-default-bibliography '("~/notes/bibliography/library.bib"))
+      ;; 	(setq reftex-plug-intoAUCTex t))
+      ;;   )
+
+      ;; (setq org-latex-pdf-process
+      ;; 	  '("pdflatex -shell-escape -interaction nonstopmode -output-directory %o %f"
+      ;; 	    "bibtex %b"
+      ;; 	    "pdflatex -shell-escape -interaction nonstopmode -output-directory %o %f"
+      ;; 	    "pdflatex -shell-escape -interaction nonstopmode -output-directory %o %f"))
+
+      ;; (setq org-latex-logfiles-extensions (quote ("lof" "lot" "tex" "aux" "idx" "log" "out" "toc" "nav" "snm" "vrb" "dvi" "fdb_latexmk" "blg" "brf" "fls" "entoc" "ps" "spl" "bbl" "pygtex" "pygstyle")))
+    #+end_src
+
+*** Switch task to Today and schedule for today
+    #+begin_src emacs-lisp
+    (defun my-org-switch-to-today-and-schedule-for-today ()
+      "Set subtree Today and schedule for today."
+      (interactive)
+      (unless (org-before-first-heading-p)
+	(org-todo "Today")
+	(org-schedule nil "+0d")))
+
+    (define-key org-mode-map (kbd "C-c 1") 'my-org-switch-to-today-and-schedule-for-today)
+    #+end_src
+
+*** Org agenda and gcal
+
+    notjustsilicon  4/1AX4XfWiZgARDozXsKVrau15xu2vPs59z722B14LGe6II7yI5oeU_TZsl4XA
+    304826646541-hf9l0hfunohu8jj0mabf13r29l49vo37.apps.googleusercontent.com
+    92AYbqTfmX87L1exwt7V6VHJ
+
+
+    715025297216-elbh7nndnp57eofa3940lhtsfhb0cc8t.apps.googleusercontent.com
+
+
+    715025297216-kglul354dd87gpravtoo4ibrq5p686kg.apps.googleusercontent.com
+    HNCpfg1Jf0tmdYmvKcKsw8pU
+    #+begin_src emacs-lisp
+
+;; (use-package compat
+;;   :straight t
+;;   :config
+;;   )
+
+;; (use-package org-timeblock
+;;   :straight (org-timeblock :type git
+;; 			   :host github
+;; 			   :repo "ichernyshovvv/org-timeblock"))
+
+
+
+(use-package org-gcal
+  :straight t 
+  :config
+  (setq
+   org-gcal-client-id "422898111781-esaupnblj5eqs1c9t46tlokfq7tt5eti.apps.googleusercontent.com"
+   org-gcal-client-secret "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"
+   org-gcal-file-alist '(("sami@8-bit-sheep.com" .  "~/notes/gcal.org")))
+  )
+
+    ;; (use-package org-caldav
+    ;;   :straight t
+    ;;   :config
+    ;;   (message "we are here, though")
+    ;;   (setq org-caldav-url "https://mail.kpsystem.se:2080/rpc/calendars/sami@kpsystem.se/calendar:762f1d7b-3249-b6b0-9135-7e1e0debad23"
+    ;; 	    org-caldav-calendar-id ""
+    ;; 	    org-caldav-inbox "/home/sakalli/notes/kpsystems-inbox.org"
+    ;; 	    org-caldav-files (list "~/notes/gcal.org"
+    ;; 				   "~/notes/doing-shit/tasks.org"
+    ;; 				   "~/notes/doing-shit/inbox.org"
+    ;; 				   "~/notes/doing-shit/tickler.org")
+    ;; 	    org-icalendar-timezone "Europe/Helsinki"))
+    ;; (setq 
+    ;; org-caldav-oauth2-client-id
+    ;; org-caldav-oauth2-client-secret
+    ;; org-caldav-url to the symbol 'google, and look up the
+    ;; org-caldav-calendar-id "715025297216-kglul354dd87gpravtoo4ibrq5p686kg.apps.googleusercontent.com"
+    ;; )
+
+    (setq org-agenda-files (list "~/notes/gcal.org"
+				 "~/notes/doing-shit/tasks.org"
+				 "~/notes/doing-shit/inbox.org"
+				 "~/notes/doing-shit/tickler.org"))
+
+    (setq org-refile-targets '(("~/notes/doing-shit/tasks.org" :maxlevel . 3)
+			       ("~/notes/doing-shit/someday.org" :level . 1)
+			       ("~/notes/doing-shit/tickler.org" :maxlevel . 2)))
+    (define-key org-read-date-minibuffer-local-map (kbd "C-n") (lambda () (interactive) (org-eval-in-calendar '(calendar-forward-week 1))))
+    (define-key org-read-date-minibuffer-local-map (kbd "C-f") (lambda () (interactive) (org-eval-in-calendar '(calendar-forward-day 1))))
+    (define-key org-read-date-minibuffer-local-map (kbd "C-p") (lambda () (interactive) (org-eval-in-calendar '(calendar-backward-week 1))))
+    (define-key org-read-date-minibuffer-local-map (kbd "C-b") (lambda () (interactive) (org-eval-in-calendar '(calendar-backward-day 1))))
+    ;; (setq
+    ;;  org-gcal-client-id "304826646541-hf9l0hfunohu8jj0mabf13r29l49vo37.apps.googleusercontent.com"
+    ;;  org-gcal-client-secret "92AYbqTfmX87L1exwt7V6VHJ"
+    ;;  org-gcal-file-alist '(("notjustsilicon@gmail.com" .  "~/notes/gcal.org")))
+
+
+
+    ;; (setq
+    ;;   org-gcal-client-id "715025297216-elbh7nndnp57eofa3940lhtsfhb0cc8t.apps.googleusercontent.com"
+    ;;   org-gcal-client-secret "iPokYrANYna6_DSAOh0AxfZU"
+    ;;   org-gcal-file-alist '(("sami@8-bit-sheep.com" .  "~/notes/gcal.org")))
+    #+end_src
+
+*** Org-roam
+  #+begin_src emacs-lisp
+
+    ;; (when (not (eq system-type 'darwin))
+      ;; (use-package org-ref
+      ;;   :straight t
+      ;;   :config
+      ;;   (setq bibtex-completion-bibliography '("~/notes/bibliography/library.bib")
+      ;; 	    ;;bibtex-completion-library-path '("~/Dropbox/emacs/bibliography/bibtex-pdfs/")
+      ;; 	    ;;bibtex-completion-notes-path "~/Dropbox/emacs/bibliography/notes/"
+      ;; 	    bibtex-completion-notes-template-multiple-files "* ${author-or-editor}, ${title}, ${journal}, (${year}) :${=type=}: \n\nSee [[cite:&${=key=}]]\n"
+
+      ;; 	    bibtex-completion-additional-search-fields '(keywords)
+      ;; 	    )
+      ;;   )
+
+
+      ;; (require 'org-ref)
+      ;; (require 'doi-utils)
+      ;; (require 'org-ref-arxiv)
+      ;; (require 'org-ref-pdf)
+      ;; (use-package bibtex-completion
+      ;;   :config
+      ;;   (setq bibtex-completion-bibliography "/home/sakalli/notes/bibliography/library.bib"))
+      ;; (use-package org-noter
+
+      ;;   :straight t
+      ;;   :after (:any org pdf-view)
+      ;;   :config
+      ;;   ;; Your org-noter config ........
+      ;;   (require 'org-noter-pdftools)
+      ;;   (setq org-noter-always-create-frame t
+      ;; 	    org-noter-hide-other nil
+      ;; 	    org-noter-notes-search-path '("~/notes/org-roam/literature/")
+      ;; 	    ))
+      ;; (use-package org-roam
+      ;;   :straight t
+      ;;   :init
+      ;;   (setq org-roam-v2-ack t)
+      ;;   :custom
+      ;;   (org-roam-directory "/home/sakalli/notes/org-roam/")
+      ;;   :bind (("C-c n l"   . org-roam-buffer-toggle)
+      ;; 	     ("C-c n f"   . org-roam-node-find)
+      ;; 	     ("C-c n i"   . org-roam-node-insert))
+      ;;   :config
+      ;;   (setq org-roam-capture-templates
+      ;; 	    '(("d" "default" plain "%?" :target
+      ;; 	       (file+head "%<%Y%m%d%H%M%S>-${slug}.org"
+      ;; 			  "#+title: ${title}\n#+filetags: :tag1:tag2:\n\n- sources ::\n- related notes ::\n")
+      ;; 	       :unnarrowed t)))
+
+
+      ;;   (org-roam-setup))
+
+      ;; (setq org-roam-node-display-template (concat "${title:*} " (propertize "${tags:10}" 'face 'org-tag)))
+
+      ;; (use-package org-roam-bibtex
+      ;;   :straight t
+      ;;   :after org-roam
+      ;;   :custom
+      ;;   (orb-note-actions-interface 'helm)
+      ;;   :config
+      ;;   (setq orb-insert-interface 'helm-bibtex)
+      ;;   (setq orb-preformat-keywords '("citekey" "author" "date"))
+      ;;   ;; this part specifies the template
+      ;;   (add-to-list 'org-roam-capture-templates
+      ;; 		   '("b" "Bibliography note" plain
+      ;; 		     "%?"  ;; <= you can add template stuff here
+      ;; 		     :if-new
+      ;; 		     (file+head "/home/sakalli/notes/org-roam/literature/${citekey}.org"  ;; <= path to new notes and filename
+      ;; 				"#+TITLE: ${title}\n #+ROAM_KEY: cite:${citekey}\n* NOTES \n :PROPERTIES:\n :NOTER_DOCUMENT: %(orb-process-file-field \"${citekey}\")\n :END:\n\n";; <= the template can also be tweaked here 
+      ;; 				)
+      ;; 		     :unnarrowed t)))
+      ;; (setq org-ref-bibliography-f"~/notes/biblio-notes.org"
+      ;; 	  org-ref-default-bibliography '("~/notes/bibliography/library.bib")
+      ;; 	  org-ref-pdf-directory    "~/notes/_pdfs/")
+      ;; (setq bibtex-completion-pdf-field "file" ; better bibtex in zotero uses "file" instead "File"
+      ;; 	  bibtex-completion-bibliography "~/notes/bibliography/library.bib" 
+      ;; 	  bibtex-completion-library-path  "~/notes/_pdfs/"
+      ;; 	  bibtex-completion-notes-path "~/notes/org-roam/bibliographic-notes/")
+      ;; (use-package helm-bibtex
+      ;;   :straight t 
+      ;;   :after org
+      ;;   :init
+      ;; 					  ; blah blah
+      ;;   :config
+      ;; 					  ;blah blah
+      ;;   )
+
+      ;; (setq bibtex-format-citation-functions
+      ;; 	  '((org-mode . (lambda (x) (insert (concat
+      ;; 					     "\\cite{"
+      ;; 					     (mapconcat 'identity x ",")
+      ;; 					     "}")) ""))))
+      ;; )
+
+  #+end_src
+
+*** Org agenda keyb
+    #+begin_src emacs-lisp                                        ; Set key combos
+    (define-key global-map "\C-ca" 'org-agenda)
+
+    (setq org-agenda-custom-commands
+	  '(("c" "Simple agenda view"
+	     ((agenda "")
+	      (alltodo "")))))
+
+    (add-hook 'org-agenda-mode-hook (lambda () (org-gcal-sync) ))
+    (add-hook 'org-capture-after-finalize-hook (lambda () (org-gcal-sync)
+						 ;;(org-trello-sync-card)
+						 ))
+
+    #+end_src
+
+*** Org TODO keywoard colors
+    #+begin_src emacs-lisp
+    (setq org-todo-keyword-faces
+	  '(
+	    ("Inbox" . "#A9421E")
+	    ("Today" . "#7AADB6")
+	    ("Done" . "#50968D")
+	    ("Waiting" . "#E59124")
+	    ("Current-Pomodoro" . "#92BD6C")
+	    ("Cancelled" . "#DF6854")))
+    #+end_src
+
+*** Org capture templates
+  #+begin_src emacs-lisp
+  (setq org-capture-templates
+	'(("a" "Appointment" entry (file  "~/notes/gcal.org" )
+	   "* %?\n\n%^T\n\n:PROPERTIES:\n\n:END:\n\n")
+	  ("t" "todo" entry (file+headline  "~/notes/doing-shit/inbox.org" "Tasks")
+	   "* Todo %?\nSCHEDULED: %(org-insert-time-stamp (org-read-date nil t \"+0d\"))\n%a\n")
+
+	  ;; ("t" "Todo [inbox]" entry
+	  ;;  (file+headline "~/notes/doing-shit/inbox.org" "Tasks")
+	  ;;  "** Todo %i%?")
+	  ("T" "Tickler" entry
+	   (file+headline "~/notes/doing-shit/tickler.org" "Tickler")
+	   "* %i%? \n %U")))
+
+  #+end_src
+
+*** Org trello
+    #+begin_src emacs-lisp
+      ;; (use-package org-trello
+      ;;   :straight t )
+    #+end_src
+
+**** Org-trello configuration
+    #+begin_src emacs-lisp
+    ;; org-trello major mode for all .trello files
+   ;; (add-to-list 'auto-mode-alist '("\\.trello$" . org-mode))
+
+    ;; add a hook function to check if this is trello file, then activate the org-trello minor mode.
+    ;; (add-hook 'org-mode-hook
+    ;;           (lambda ()
+    ;;             (let ((filename (buffer-file-name (current-buffer))))
+    ;;               (when (and filename (string= "trello" (file-name-extension filename)))
+    ;;                 (org-trello-mode)))))
+
+
+
+
+    #+end_src
+
+*** Org-trello configuration
+    #+begin_src emacs-lisp
+    ;; org-trello major mode for all .trello files
+    ;;(add-to-list 'auto-mode-alist '("\\.trello$" . org-mode))
+
+    ;; add a hook function to check if this is trello file, then activate the org-trello minor mode.
+    ;; (add-hook 'org-mode-hook
+    ;;           (lambda ()
+
+    ;;             (let ((filename (buffer-file-name (current-buffer))))
+    ;;               (when (and filename (string= "trello" (file-name-extension filename)))
+    ;;                 (org-trello-mode)))))
+
+
+
+
+    #+end_src
+    (message "End org")
+
+
+
+    #+RESULTS:`
+
+*** face remap
+    #+begin_src emacs-lisp
+    (when (member "Noto Color Emoji" (font-family-list))
+      (set-fontset-font
+	t 'symbol (font-spec :family "Noto Color Emoji") nil 'prepend))
+
+
+    (use-package face-remap
+      :custom-face
+      (fixed-pitch ((t (:font "RobotoMono Nerd Font" :height 110))))
+      (org-table ((t (:inherit fixed-pitch))))
+      (org-block ((t (:inherit fixed-pitch))))    
+      ;;      :hook
+      ;;(org-mode-hook . variable-pitch-mode)
+      )
+    #+end_src
+*** org-roam-ui 
+    #+begin_src emacs-lisp
+
+
+    (use-package org-roam-ui
+      :straight t
+      :after org-roam ;; or :after org
+      ;;         normally we'd recommend hooking orui after org-roam, but since org-roam does not have
+      ;;         a hookable mode anymore, you're advised to pick something yourself
+      ;;         if you don't care about startup time, use
+      ;;  :hook (after-init . org-roam-ui-mode)
+      :config
+      (setq org-roam-ui-sync-theme t
+	    org-roam-ui-follow t [[:build (:not native-compile)]] 
+	    org-roam-ui-update-on-save t
+	    org-roam-ui-open-on-start t))
+    #+end_src
+
+*** org-tree-slide 
+    #+begin_src emacs-lisp
+
+
+    (use-package org-tree-slide
+      :hook ((org-tree-slide-play . srk/presentation-setup)
+	     (org-tree-slide-stop . srk/presentation-end))
+      :bind ((:map org-mode-map
+		   ("s-<f7>" . org-tree-slide-mode)
+		   :map org-tree-slide-mode-map
+		   ("(" . org-tree-slide-move-previous-tree)
+		   (")" . org-tree-slide-move-next-tree)
+		   ("S-SPC" . org-tree-slide-move-previous-tree)
+		   ("SPC" . org-tree-slide-move-next-tree)))
+      :custom
+      (org-tree-slide-slide-in-effect t)
+      (org-tree-slide-activate-message "Lets do this")
+      (org-tree-slide-deactivate-message "Thank you!")
+      (org-tree-slide-header t)
+      (org-tree-slide-breadcrumbs " > ")
+      (org-image-actual-width nil))
+
+    #+end_src
+
+*** org-download 
+    #+begin_src emacs-lisp
+    (use-package org-download
+      :straight t
+      ;; org-download use buffer-local variables. Set it individually in files. Otherwise, put things flatly in misc
+      ;; folder.
+      :init
+      (setq-default org-download-method 'directory
+		    org-download-image-dir "~/notes/downloaded-images/"
+		    org-download-heading-lvl nil
+		    org-download-delete-image-after-download t
+		    org-download-screenshot-method "flameshot gui --raw > %s"
+		    org-download-image-org-width 600
+		    org-download-annotate-function (lambda (link) "")))
+
+
+    #+end_src
+*** org-bullets
+    #+begin_src emacs-lisp 
+    (use-package org-bullets
+      :straight t 
+      :config
+      (add-hook 'org-mode-hook (lambda () (org-bullets-mode 1))))
+    #+end_src
+
+** Helpful
+  #+begin_src emacs-lisp 
+  (use-package helpful
+    :straight t 
+    :bind
+    (("C-h f" . helpful-callable)
+     ("C-h v" . helpful-variable)
+     ("C-h k" . helpful-key)
+     ("C-c C-d" . helpful-at-point)
+     ("C-h F" . helpful-function)
+     ("C-h C" . helpful-command)))
+
+  #+end_src
+
+** Spelling and grammar
+  #+begin_src emacs-lisp
+
+  (use-package flyspell
+    :straight t )
+
+  #+end_src
+
+** Notespace
+  #+begin_src emacs-lisp
+
+  ;; (defun cider-interactive-notify-and-eval (code)
+  ;;   (interactive)
+  ;;   (message code)
+  ;;   (cider-interactive-eval
+  ;;    code
+  ;;    (cider-interactive-eval-handler nil (point))
+  ;;    nil
+  ;;    nil))
+
+  ;; (defun notespace/eval-and-realize-note-at-this-line ()
+  ;;   (interactive)
+  ;;   (save-buffer)
+  ;;   (cider-interactive-notify-and-eval
+  ;;    (concat "(notespace.api/eval-and-realize-note-at-line "
+  ;;            (number-to-string (line-number-at-pos))
+  ;;            ")")))
+
+  ;; (defun notespace/eval-and-realize-notes-from-this-line ()
+  ;;   (interactive)
+  ;;   (save-buffer)
+  ;;   (cider-interactive-notify-and-eval
+  ;;    (concat "(notespace.api/eval-and-realize-notes-from-line "
+  ;;            (number-to-string (line-number-at-pos))
+  ;;            ")")))
+
+  ;; (defun notespace/eval-and-realize-notes-from-change ()
+  ;;   (interactive)
+  ;;   (save-buffer)
+  ;;   (cider-interactive-notify-and-eval
+  ;;    (concat "(notespace.api/eval-and-realize-notes-from-change)")))
+
+  ;; (defun notespace/init-with-browser ()
+  ;;   (interactive)
+  ;;   (save-buffer)
+  ;;   (cider-interactive-notify-and-eval
+  ;;    (concat "(notespace.api/init-with-browser)")))
+
+  ;; (defun notespace/init ()
+  ;;   (interactive)
+  ;;   (save-buffer)
+  ;;   (cider-interactive-notify-and-eval
+  ;;    (concat "(notespace.api/init)")))
+
+  ;; (defun notespace/eval-this-notespace ()
+  ;;   (interactive)
+  ;;   (save-buffer)
+  ;;   (cider-interactive-notify-and-eval
+  ;;    "(notespace.api/eval-this-notespace)"))
+
+  ;; (defun notespace/eval-and-realize-this-notespace ()
+  ;;   (interactive)
+  ;;   (save-buffer)
+  ;;   (cider-interactive-notify-and-eval
+  ;;    "(notespace.api/eval-and-realize-this-notespace)"))
+
+  ;; (defun notespace/render-static-html ()
+  ;;   (interactive)
+  ;;   (cider-interactive-notify-and-eval
+  ;;    "(notespace.api/render-static-html)"))
+
+  ;; ;; suggested emacs key binding (thanks @mchampine)
+  ;; (add-hook '
+  ;;           (lambda ()
+  ;;             (define-key clojure-mode-map (kbd "C-c n e") 'notespace/eval-this-notespace)
+  ;;             (define-key clojure-mode-map (kbd "C-c n r") 'notespace/eval-and-realize-this-notespace)
+  ;;             (define-key clojure-mode-map (kbd "C-c n n") 'notespace/eval-and-realize-note-at-this-line)
+  ;;             (define-key clojure-mode-map (kbd "C-c n f") 'notespace/eval-and-realize-notes-from-this-line)
+  ;;             (define-key clojure-mode-map (kbd "C-c n i b") 'notespace/init-with-browser)
+  ;;             (define-key clojure-mode-map (kbd "C-c n i i") 'notespace/init)
+  ;;             (define-key clojure-mode-map (kbd "C-c n s") 'notespace/render-static-html)
+  ;;             (define-key clojure-mode-map (kbd "C-c n c") 'notespace/eval-and-realize-notes-from-change)))
+
+  ;; ;; suggested spacemacs key bindings:
+  ;; ;;  (spacemacs/set-leader-keys-for-major-mode 'clojure-mode
+  ;; ;;    "n e" 'notespace/eval-this-notespace
+  ;; ;;    "n r" 'notespace/eval-and-realize-this-notespace
+  ;; ;;    "n n" 'notespace/eval-and-realize-note-at-this-line
+  ;; ;;    "n f" 'notespace/eval-and-realize-notes-from-this-line
+  ;; ;;    "n i b" 'notespace/init-with-browser
+  ;; ;;    "n i i" 'notespace/init
+  ;; ;;    "n s" 'notespace/render-static-html
+  ;; ;;    "n c" 'notespace/eval-and-realize-notes-from-change)
+
+  #+end_src
+
+** Coding and scripting
+  *** Line numbers
+    Set on line numbers in prog mode
+
+    (add-hook 'prog-mode-hook 'linum-mode)
+
+  *** Yasnippet
+    Yet another snippet extension for Emacs https://github.com/joaotavora/yasnippet/tree/d91dd66f2aed9bbaef32813a68b105ea77e83890
+
+    #+begin_src emacs-lisp  
+    (use-package yasnippet-snippets
+      :straight t)
+
+    (use-package yasnippet
+      :straight t)
+    #+end_src
+
+  *** Flycheck mode
+    A major mode for editing Nix expressions (.nix files).  See the Nix manual for more information available at https://nixos.org/nix/manual/.
+    #+begin_src emacs-lisp  
+    (use-package flycheck
+      :straight t 
+      :init (global-flycheck-mode))
+    #+end_src
+
+  *** Nix mode
+    A major mode for editing Nix expressions (.nix files).  See the Nix manual for more information available at https://nixos.org/nix/manual/.
+    #+begin_src emacs-lisp  
+    (use-package nix-mode
+      :straight t )
+    #+end_src
+
+  *** Emmet mode
+    Unfold CSS-selector-like expressions to markup. Intended to be used with sgml-like languages; xml, html, xhtml, xsl, etc.
+
+    See `emmet-mode' for more information.
+
+    Copy emmet-mode.el to your load-path and add to your .emacs:
+
+    (require 'emmet-mode)
+
+    Example setup:
+
+    (add-to-list 'load-path "~/Emacs/emmet/")
+    (require 'emmet-mode)
+    (add-hook 'sgml-mode-hook 'emmet-mode) ;; Auto-start on any markup modes
+    (add-hook 'html-mode-hook 'emmet-mode)
+    (add-hook 'css-mode-hook  'emmet-mode)
+
+    Enable the minor mode with M-x emmet-mode.
+
+    See ``Test cases'' section for a complete set of expression types.
+
+    If you are hacking on this project, eval (emmet-test-cases) to ensure that your changes have not broken anything. Feel free to add new test cases if you add new features.
+
+    #+begin_src emacs-lisp
+    ;;(use-package emmet-mode
+    ;;  :straight t )
+    #+end_src
+
+  *** Htmlize
+    This package converts the buffer text and the associated decorations to HTML.
+
+    #+begin_src emacs-lisp
+    (use-package htmlize
+      :straight t 
+      :init)
+    #+end_src
+
+  *** JS packages
+    js2-mode is an "Improved JavaScript editing mode for GNU Emacs". js2-refaktor is a collection of small refactoring functions to further the idea of a
+    JavaScript IDE in Emacs that started with js2-mode. Xref-js2 adds an xref backend for JavaScript files.
+
+    #+begin_src emacs-lisp
+    ;; (use-package js2-
+    ;; :straight t 
+    ;;   :init
+    ;;   (progn
+    ;;     (add-to-list 'load-path "/path/to/js2-mode/directory")
+    ;;     (autoload 'js2-mode "js2-mode" nil t)
+    ;;     (add-to-list 'auto-mode-alist '("\\.js$" . js2-mode))
+    ;;     (global-set-key [f5] 'slime-js-reload)
+    ;;     (add-hook 'js2-mode-hook
+    ;;               (lambda ()
+    ;;                 (slime-js-minor-mode 1)))))
+
+    ;; (use-package js2-refactor
+    ;;   :straight t 
+    ;;   :init)
+
+    ;; (use-package xref-js2
+    ;;   :straight t 
+    ;;   :init)
+
+
+    #+end_src
+  *** Prettier
+    prettier-emacs: minor-mode to prettify javascript files on save
+    https://github.com/prettier/prettier-emacs
+
+    #+begin_src emacs-lisp
+    ;; (use-package prettier-js
+    ;;   :disabled t
+    ;;   :after typescript-mode
+    ;;   :hook ((js2-mode . prettier-js-mode)
+    ;;          (rjsx-mode . prettier-js-mode)
+    ;;          (typescript-mode . prettier-js-mode))
+    ;;   :config (setq prettier-js-args '("--jsx-single-quote"
+    ;;                                    "--no-semi"
+    ;;                                    "--single-quote"
+    ;;                                    "--print-width 160")))
+    #+end_src
+    Remember to insall prettier on the machine. yarn global add prettier
+
+  *** Treemacs
+    #+begin_src emacs-lisp
+    (use-package treemacs
+      :straight t 
+      :defer t
+      :init
+      (with-eval-after-load 'winum
+	(define-key winum-keymap (kbd "M-0") #'treemacs-select-window))
+      :config
+      (progn
+	(setq treemacs-collapse-dirs                 (if treemacs-python-executable 3 0)
+	      treemacs-deferred-git-apply-delay      0.5
+	      treemacs-directory-name-transformer    #'identity
+	      treemacs-display-in-side-window        t
+	      treemacs-eldoc-display                 t
+	      treemacs-file-event-delay              5000
+	      treemacs-file-extension-regex          treemacs-last-period-regex-value
+	      treemacs-file-follow-delay             0.2
+	      treemacs-file-name-transformer         #'identity
+	      treemacs-follow-after-init             t
+	      treemacs-git-command-pipe              ""
+	      treemacs-goto-tag-strategy             'refetch-index
+	      treemacs-indentation                   2
+	      treemacs-indentation-string            " "
+	      treemacs-is-never-other-window         nil
+	      treemacs-max-git-entries               5000
+	      treemacs-missing-project-action        'ask
+	      treemacs-no-png-images                 nil
+	      treemacs-no-delete-other-windows       t
+	      treemacs-project-follow-cleanup        nil
+	      treemacs-persist-file                  (expand-file-name ".cache/treemacs-persist" user-emacs-directory)
+	      treemacs-position                      'left
+	      treemacs-recenter-distance             0.1
+	      treemacs-recenter-after-file-follow    nil
+	      treemacs-recenter-after-tag-follow     nil
+	      treemacs-recenter-after-project-jump   'always
+	      treemacs-recenter-after-project-expand 'on-distance
+	      treemacs-show-cursor                   nil
+	      treemacs-show-hidden-files             t
+	      treemacs-silent-filewatch              nil
+	      treemacs-silent-refresh                nil
+	      treemacs-sorting                       'alphabetic-asc
+	      treemacs-space-between-root-nodes      t
+	      treemacs-tag-follow-cleanup            t
+	      treemacs-tag-follow-delay              1.5
+	      treemacs-user-mode-line-format         nil
+	      treemacs-width                         35)
+
+	;; The default width and height of the icons is 22 pixels. If you are
+	;; using a Hi-DPI display, uncomment this to double the icon size.
+	;;(treemacs-resize-icons 44)
+
+	(treemacs-follow-mode t)
+	(treemacs-filewatch-mode t)
+	(treemacs-fringe-indicator-mode t)
+	(pcase (cons (not (null (executable-find "git")))
+		     (not (null treemacs-python-executable)))
+	  (`(t . t)
+	   (treemacs-git-mode 'deferred))
+	  (`(t . _)
+	   (treemacs-git-mode 'simple))))
+      :bind
+      (:map global-map
+	    ("M-0"       . treemacs-select-window)
+	    ("C-x t 1"   . treemacs-delete-other-windows)
+	    ("C-x t t"   . treemacs)
+	    ("C-x t B"   . treemacs-bookmark)
+	    ("C-x t C-t" . treemacs-find-file)
+	    ("C-x t M-t" . treemacs-find-tag))
+      )
+
+
+    (use-package treemacs-projectile
+      :after treemacs projectile
+      :diminish (projectile-mode)
+      :straight t )
+
+    ;; (use-package treemacs-icons-dired
+    ;;   :after treemacs dired
+    ;;   :straight t 
+    ;;   :config (treemacs-icons-dired-mode))
+
+    (use-package treemacs-magit
+      :after treemacs magit
+      :straight t )
+
+    ;; (use-package lsp-treemacs
+    ;;   :config
+    ;;   (lsp-metals-treeview-enable t)
+    ;;   (setq lsp-metals-treeview-show-when-views-received t))
+    #+end_src
+  *** Typescript
+    Typescript Interactive Development Environment
+
+    #+begin_src emacs-lisp
+    ;; (use-package prettier-js
+    ;;   :straight t 
+    ;;   :init (add-hook 'tide-mode-hook 'prettier-js-mode))
+
+    (use-package js2-mode
+      :straight t )
+
+    (use-package rjsx-mode
+      :straight t 
+      :mode(("\\.js\\'" . rjsx-mode)
+	    ("\\.jsx\\'" . rjsx-mode)
+	    ("\\.ts\\'" . rjsx-mode)
+	    ("\\.tsx\\'" . rjsx-mode))
+      :init
+      ;;    (add-hook 'rjsx-mode-hook 'prettier-js-mode)
+      (add-hook 'rjsx-mode-hook 'tide-mode))
+
+    (use-package web-mode
+      :straight t 
+      :custom
+      (web-mode-markup-indent-offset 2)
+      (web-mode-css-indent-offset 2)
+      (web-mode-code-indent-offset 2))
+
+    (defun setup-tide-mode ()
+      (interactive)
+      (tide-setup)
+      (flycheck-mode +1)
+      (setq flycheck-check-syntax-automatically '(save mode-enabled))
+      (eldoc-mode +1)
+      (tide-hl-identifier-mode +1)
+      (company-mode +1)
+      (aggressive-indent-mode nil))
+
+    (use-package tide
+      :straight t 
+      :config
+      (add-hook 'typescript-mode-hook #'setup-tide-mode)
+      (add-to-list 'auto-mode-alist '("\\.tsx\\'" . web-mode))
+      (add-hook 'web-mode-hook
+		(lambda ()
+		  (when (string-equal "tsx" (file-name-extension buffer-file-name))
+		    (setup-tide-mode))))
+      (flycheck-add-mode 'typescript-tslint 'web-mode))
+    #+end_src
+  *** Markdown mode
+    #+begin_src emacs-lisp
+
+    (use-package markdown-mode
+      :straight t )
+
+    #+end_src
+
+  *** R on emacs
+    #+begin_src emacs-lisp
+    ;; rstats on emacs
+    #+end_src
+
+    **** ESS
+    Emacs Speaks Statistics (ESS) is a package designed to support editing of scripts and interaction with various statistical analysis programs such as R, S-Plus, SAS, Stata and OpenBUGS/JAGS. For more details please visit ESS home page at https://ess.r-project.org/
+    #+begin_src emacs-lisp
+    ;; (setq load-path (cons "/usr/share/emacs/site-lisp/ess" load-path))
+    ;; (load "/usr/share/emacs/site-lisp/ess/ess-site")
+
+
+    (use-package ess
+      :straight t 
+      :init (require 'ess-site))
+    #+end_src
+    **** GralVM R
+    #+begin_src emacs-lisp
+    ;;(setq inferior-R-program-name "/usr/lib/jvm/java-8-graal/bin/R")
+    #+end_src
+
+  *** Emacs lisp
+  *** Clojure
+    **** Clj Kondo
+    Clj linter
+    #+begin_src emacs-lisp
+    (use-package flycheck-clj-kondo
+      :straight t )
+    #+end_src
+
+**** Clojure mode
+    Provides a Clojure interactive development environment for Emacs, built on top of nREPL.
+
+    #+begin_src emacs-lisp
+    (use-package clojure-mode
+      :straight t 
+      :mode (("\\.edn$" . clojure-mode))
+      :init (add-hook 'clojure-mode-hook 'clojure-pretty-lambda-mode)
+      :config 
+      (require 'flycheck-clj-kondo)
+      (defun clerk-show ()
+	(interactive)
+	(save-buffer)
+	(let
+	    ((filename
+	      (buffer-file-name)))
+	  (when filename
+	    (cider-interactive-eval
+	     (concat "(nextjournal.clerk/show! \"" filename "\")")))))
+
+      (define-key clojure-mode-map (kbd "<S-return>") 'clerk-show)
+
+      )
+
+    (defun my-clojure-mode-hook ()
+      (hs-minor-mode)
+      (local-set-key (kbd "<backtab>") 'hs-show-all) ;; ctrl+shift+=
+      (local-set-key (kbd "C-S-<iso-lefttab>") 'hs-hide-all)   ;; ctrl+shift+-
+      (local-set-key (kbd "TAB") 'hs-toggle-hiding)
+      (local-set-key clojure-mode-map (kbd "<S-return>") 'clerk-show))
+
+    (add-hook 'clojure-mode-hook 'my-clojure-mode-hook)
+
+
+    #+end_src
+
+**** Cider
+    Provides a Clojure interactive development environment for Emacs, built on top of nREPL.
+
+    #+begin_src emacs-lisp
+    (use-package cider
+      :straight t 
+      :config
+      (add-hook 'cider-mode-hook (lambda () (remove-hook 'completion-at-point-functions #'cider-complete-at-point)))
+
+      (setq cider-cljs-lein-repl "(do (use 'figwheel-sidecar.repl-api) (start-figwheel!) (cljs-repl))"))
+
+    #+end_src
+
+**** Eval to var (custom funcitons)
+    Custom (personal) helper functions for cider and clojure, where one keybinding lets you set a symbol and another evaluates the last sexp and binds it as a var to that symbol. Helper for debugging and REPL driven dev.
+
+    #+begin_src emacs-lisp
+
+    (defun eval-last-sexp-to-var ()
+      "Evaluates last sexp and binds it to symbol stored in 'saved-symbol.
+    saved-symbol defaults to 'temp"
+      (interactive)
+      (if (not saved_symbol) (setq saved-symbol "temp"))
+      (cider-interactive-eval
+       (format (concat "(def " saved-symbol " %s)")
+	       (cider-last-sexp))))
+
+    (define-key cider-mode-map (kbd "C-c c") 'eval-last-sexp-to-var)
+    (define-key cider-mode-map (kbd "C-c C-b") 'cider-eval-buffer)
+
+
+    (defun set-last-sexp-to-symbol ()
+      "Saves the last sexp to 'saved-symbol for use with eval-last-sexp-to-var"
+      (interactive)
+      (setq saved-symbol (cider-last-sexp)))
+
+    (define-key cider-mode-map (kbd "C-c w") 'set-last-sexp-to-symbol)
+
+
+    #+end_src
+
+**** Org-mode clojure
+    #+begin_src emacs-lisp
+    ;; (use-package ob-clojure-literate
+    ;; :straight t)
+
+    ;; (require 'ob-clojure-literate)
+    (setq ob-clojure-literate-auto-jackin-p t)
+
+    ;; ;;; no project, CIDER jack-in outside of project.
+    ;; ;; ISSUE: can't use `clj-refactor'
+    ;; ;; (setq ob-clojure-literate-project-location nil)
+    ;; ;;; use `ob-clojure/' as ob-clojure-literate project.
+    (setq ob-clojure-literate-project-location
+	  (expand-file-name (concat user-emacs-directory "Org-mode/")))
+    (setq ob-clojure-literate-default-session "*cider-repl ob-clojure*")
+
+    ;; ;; (add-hook 'org-mode-hook #'ob-clojure-literate-mode)
+    (define-key org-babel-map (kbd "M-c") 'ob-clojure-literate-mode)
+
+    (setq ob-clojure-literate-auto-jackin-p t)
+
+
+
+    #+end_src
+
+**** clj-refactor
+    #+begin_src emacs-lisp
+    (use-package clj-refactor
+      :straight t 
+      :init
+      (add-hook 'clojure-mode-hook 'clj-refactor-mode)
+      (add-hook 'emacs-lisp-mode-hook #'rainbow-delimiters-mode)
+      :config
+      ;; Configure the Clojure Refactoring prefix:
+      (cljr-add-keybindings-with-prefix "C-c .")
+      :diminish clj-refactor-mode)
+
+    ;; (use-package clj-refactor
+    ;;   :straight t 
+    ;;   :config
+    ;;   (add-hook 'clojure-mode-hook #'clj-refactor-mode)
+    ;;   (add-hook 'emacs-lisp-mode-hook #'rainbow-delimiters-mode))
+    #+end_src
+
+**** paredit
+    #+begin_src emacs-lisp
+    ;; Install, paredit, enable in elisp and Clojure modes
+    (use-package paredit
+      :diminish paredit-mode
+      :init
+      (add-hook 'emacs-lisp-mode-hook #'enable-paredit-mode)
+      (add-hook 'clojure-mode-hook #'enable-paredit-mode))
+    #+end_src
+
+**** missing reverse traspose
+    https://emacs.stackexchange.com/questions/12799/move-form-up-and-down-on-paredit-mode
+    #+begin_src emacs-lisp
+    ;; Install, paredit, enable in elisp and Clojure modes
+    (defun reverse-transpose-sexps (arg)
+      (interactive "*p")
+      (transpose-sexps (- arg))
+      ;; when transpose-sexps can no longer transpose, it throws an error and code
+      ;; below this line won't be executed. So, we don't have to worry about side
+      ;; effects of backward-sexp and forward-sexp.
+      ;;(backward-sexp (1+ arg))
+      ;;(forward-sexp 1)
+      )
+
+    (global-set-key (kbd "C-M-y") 'reverse-transpose-sexps)
+
+    #+end_src
+
+    #+RESULTS:
+    : reverse-transpose-sexps
+
+
+**** rainbow-blocks
+    Rainbow-blocks highlights blocks made of parentheses, brackets, and
+    braces according to their depth. Each successive level is
+    highlighted in a different color. This makes it easy to orient
+    yourself in the code, and tell which statements are at a given
+    level.
+    #+begin_src emacs-lisp
+    (use-package rainbow-blocks
+      :straight t 
+      :defer t
+      :init
+      (progn
+	;;(add-hook 'clojure-mode-hook #'rainbow-blocks-mode)
+	))
+    #+end_src
+
+**** Fill column indicator
+    #+begin_src emacs-lisp
+    (use-package fill-column-indicator
+      :straight t 
+      :init)
+    #+end_src
+**** Toggle chestnut and figwheel
+    Minor mode to aggressively keep your code always indented
+    #+begin_src emacs-lisp
+
+    (setq cider-cljs-lein-repl
+	  "(cond
+    (and (resolve 'user/run) (resolve 'user/browser-repl)) ;; Chestnut projects
+    (eval '(do (user/go)
+    (user/cljs-repl)))
+
+    (try
+    (require 'figwheel-sidecar.repl-api)
+    (resolve 'figwheel-sidecar.repl-api/start-figwheel!)
+    (catch Throwable _))
+    (eval '(do (figwheel-sidecar.repl-api/start-figwheel!)
+    (figwheel-sidecar.repl-api/cljs-repl)))
+
+    (try
+    (require 'cemerick.piggieback)
+    (resolve 'cemerick.piggieback/cljs-repl)
+    (catch Throwable _))
+    (eval '(cemerick.piggieback/cljs-repl (cljs.repl.rhino/repl-env)))
+
+    :else
+    (throw (ex-info \"Failed to initialize CLJS repl. Add com.cemerick/piggieback and optionally figwheel-sidecar to your project.\" {})))")
+
+    (setq cider-cljs-lein-repl "(do (use 'figwheel-sidecar.repl-api) (start-figwheel!) (cljs-repl))")
+    #+end_src
+**** Clojure Pretty lambda
+    A modified version of pretty-lambdada.el which instead of changing Emacs Lisps's `lambda` keyword to the greek letter, changes the Clojure anonymous keyword `fn`. Whenever fn occurs as a separate word and followed by an opening bracket, it is displayed as the greek letter lambda.
+
+    #+begin_src emacs-lisp
+
+    (use-package clojure-pretty-lambda
+      :straight (clojure-pretty-lambda :type git :host github :repo "yonkornilov/clojure-pretty-lambda.el"))
+
+    #+end_src
+
+*** Polymode
+    Extensible framework for multiple major modes
+    #+begin_src emacs-lisp
+    (use-package polymode
+      :straight t )
+
+    #+end_src
+
+**** poly-R
+    #+begin_src emacs-lisp
+    (use-package poly-R
+      :straight t 
+      :init)
+    #+end_src
+
+**** Poly-markdown
+    #+begin_src emacs-lisp
+    (use-package poly-markdown
+      :straight t 
+      :init)
+    #+end_src
+
+**** Markdown-mode config
+    #+begin_src emacs-lisp
+    ;;; Markdown mode
+    (autoload 'markdown-mode "markdown-mode" "Major mode for editing Markdown files" t)
+    (setq auto-mode-alist (cons '("\\.markdown" . markdown-mode) auto-mode-alist))
+    (setq auto-mode-alist (cons '("\\.md" . markdown-mode) auto-mode-alist))
+    (setq auto-mode-alist (cons '("\\.ronn?" . markdown-mode) auto-mode-alist))
+    (add-to-list 'auto-mode-alist '("\\.Rmd" . poly-markdown+r-mode))
+    #+end_src
+
+*** Cider Storm
+  #+begin_src emacs-lisp
+(use-package cider-storm
+  :straight (cider-storm :type git :host github :repo "flow-storm/cider-storm")
+  :config (define-key cider-mode-map (kbd "C-c C-f") 'cider-storm-map))
+ 
+  #+end_src
+*** KP system
+  #+begin_src emacs-lisp
+(use-package transient
+  :straight t)
+
+(require 'transient)
+
+(transient-define-prefix  kp-start ()
+  "Starting panorama"
+  :info-manual ""
+  ["Arguments"
+   ("-f" "Start with flow storm" ":flowstorm")
+   ("-c" "Start only clj" ":only-clj")
+   ("-s" "Start only cljs" ":only-cljs")]
+  ["Commands"
+   ("j" "Jack in (default: clj&cljs)" kp-start*)]
+  [("q" "Quit" transient-quit-one)])
+
+(defun kp-start* (&optional args)
+  (interactive (list (transient-args 'kp-start)))
+  (let ((f (cond ((member ":only-clj" args) 'cider-jack-in-clj)
+                 ((member ":only-cljs" args) 'cider-jack-in-cljs)
+                 (t 'cider-jack-in-clj&cljs))))
+    (cond ((member ":flowstorm" args)
+           (progn
+             (unless (string-match-p ":flowstorm" cider-clojure-cli-aliases)
+               (setq-local cider-clojure-cli-aliases
+                           (concat cider-clojure-cli-aliases ":flowstorm")))
+	     (setenv "KP_STORM_SHADOWCLJS_PRELOAD" "flow-storm.storm-preload")
+             (add-to-list 'cider-jack-in-nrepl-middlewares "flow-storm.nrepl.middleware/wrap-flow-storm")
+             (add-to-list 'cider-jack-in-nrepl-middlewares '("refactor-nrepl.middleware/wrap-refactor" :predicate cljr--inject-middleware-p))
+             (add-to-list 'cider-jack-in-nrepl-middlewares "cider.nrepl/cider-middleware")))
+	  ((not (member ":flowstorm" args))
+           (when (string-match-p ":flowstorm" cider-clojure-cli-aliases)
+             (setq-local cider-clojure-cli-aliases
+                         (replace-regexp-in-string ":flowstorm" "" cider-clojure-cli-aliases)))
+	   (setenv "KP_STORM_SHADOWCLJS_PRELOAD")
+           (setq cider-jack-in-nrepl-middlewares (remove "flow-storm.nrepl.middleware/wrap-flow-storm" cider-jack-in-nrepl-middlewares))
+           (setq cider-jack-in-nrepl-middlewares (remove '("refactor-nrepl.middleware/wrap-refactor" :predicate cljr--inject-middleware-p) cider-jack-in-nrepl-middlewares))
+           (setq cider-jack-in-nrepl-middlewares (remove "cider.nrepl/cider-middleware" cider-jack-in-nrepl-middlewares))))
+    ;; todo add universal argument
+    (funcall f nil)))
+  #+end_src
+
+*** Clojure emacs utilities
+  #+begin_src emacs-lisp
+(require 'cider)
+(require 'hydra)
+;;;;;;;;;;;;:;;
+;; Temporary ;;
+;;;;;;;;;;;;;;;
+
+(defun srk/cider-storm-stop ()
+  (interactive)
+  (let* ((current-ns (cider-current-ns))
+    	 (form (cider-last-sexp))
+    	 (clj-cmd (format "(do (require 'flow-storm.runtime.debuggers-api) (flow-storm.runtime.debuggers-api/set-recording false))" form)))
+    (cider-interactive-eval clj-cmd nil nil `(("ns" ,current-ns)))))
+
+(defun srk/cider-storm-start ()
+  (interactive)
+  (let* ((current-ns (cider-current-ns))
+    	 (form (cider-last-sexp))
+    	 (clj-cmd (format "(do (require 'flow-storm.runtime.debuggers-api) (flow-storm.runtime.debuggers-api/set-recording true))" form)))
+    (cider-interactive-eval clj-cmd nil nil `(("ns" ,current-ns)))))
+
+(defun srk/cider-storm-recording? ()
+  (interactive)
+  (let* ((current-ns (cider-current-ns))
+    	 (form (cider-last-sexp))
+    	 (clj-cmd (format "(do (require 'flow-storm.tracer) (flow-storm.tracer/recording?))" form)))
+    (cider-interactive-eval clj-cmd nil nil `(("ns" ,current-ns)))))
+
+;;;;;;;;;;;;;;;;;;;
+;; General tools ;;
+;;;;;;;;;;;;;;;;;;;
+
+(defun clj-dev-tool-java-decompile ()
+  (interactive)
+  (let* ((current-ns (cider-current-ns))
+    	 (form (cider-last-sexp))
+    	 (clj-cmd (format "(do (require 'clj-java-decompiler.core) (clj-java-decompiler.core/decompile %s))" form)))
+    (cider-interactive-eval clj-cmd nil nil `(("ns" ,current-ns)))))
+
+(defun clj-dev-tool-bytecode-disassemble ()
+  (interactive)
+  (let* ((current-ns (cider-current-ns))
+    	 (form (cider-last-sexp))
+    	 (clj-cmd (format "(do (require 'clj-java-decompiler.core) (clj-java-decompiler.core/disassemble %s))" form)))
+    (cider-interactive-eval clj-cmd nil nil `(("ns" ,current-ns)))))
+
+(defun clj-dev-tool-bench ()
+  (interactive)
+  (let* ((current-ns (cider-current-ns))
+    	 (form (cider-last-sexp))
+    	 (clj-cmd (format "(do (require 'criterium.core) (criterium.core/quick-bench %s))" form)))
+    (cider-interactive-eval clj-cmd nil nil `(("ns" ,current-ns)))))
+
+(defun clj-dev-tool-profile ()
+  (interactive)
+  (let* ((current-ns (cider-current-ns))
+    	 (form (cider-last-sexp))
+    	 (clj-cmd (format "(do (require 'clj-async-profiler.core) (clj-async-profiler.core/profile %s))" form)))
+    (cider-interactive-eval clj-cmd nil nil `(("ns" ,current-ns)))
+    (shell-command "firefox \"file:///tmp/clj-async-profiler/results/\"")))
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Cider project hydras ;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defmacro cider-project-hydra (hy-cmd-name hy-cmd-title &rest menu-entries)
+  (let* ((commands-defs (mapcar (lambda (entry)
+    				  (destructuring-bind (k ecmd des ccmd) entry
+    				    `(defun ,ecmd () (interactive) (cider-interactive-eval ,ccmd))))
+    				menu-entries))
+    	 (hy-triplets (mapcar (lambda (entry)
+    				(destructuring-bind (k ecmd des ccmd) entry
+    				  `(,k ,ecmd ,des)))
+    			      menu-entries)))
+    `(progn
+       ,@commands-defs
+       (defhydra ,hy-cmd-name ()
+    	 ,hy-cmd-title
+    	 ,@hy-triplets))))
+
+
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;
+;; FlowStorm dev menu ;;
+;;;;;;;;;;;;;;;;;;;;;;;;
+
+;; (cider-project-hydra
+
+;;  flow-storm-dev-menu "FlowStrom dev menu"
+
+;;  ("s" flow-storm-stop         "Stop"       "(dev/stop)")
+;;  ("l" flow-storm-start-local  "Run local"  "(dev/start-local)")
+;;  ("r" flow-storm-start-remote "Run remote" "(dev/start-remote)")
+;;  ("R" flow-storm-refresh      "Refresh"    "(dev/refresh)"))
+
+;;;;;;;;;;;;;;;;;;;;;
+;; Hansel dev menu ;;
+;;;;;;;;;;;;;;;;;;;;;
+
+;; (cider-project-hydra
+
+;;  hansel-dev-menu "Hansel dev menu"
+
+;;  ("R" hansel-refresh "Refresh" "(dev/refresh)"))
+
+
+;;;;;;;;;;;;;;;;;;;;;;
+;; Clindex dev menu ;;
+;;;;;;;;;;;;;;;;;;;;;;
+
+;; (cider-project-hydra
+
+;;  clindex-dev-menu "Clindex dev menu"
+
+;;  ("R" clindex-refresh "Refresh" "(workbench/refresh)"))
+
+;;;;;;;;;;;;;;;;;;;;
+;; Menu utilities ;;
+;;;;;;;;;;;;;;;;;;;;
+
+;; (defvar clojure-dev-menu-name nil)
+
+;; (defun clojure-dev-menu-show ()
+;;   (interactive)
+;;   (let ((menu-name (format "%s/body" clojure-dev-menu-name)))
+;; 	(funcall (intern menu-name))))
+
+;; (defun cider-tap-last-and-show-debugger ()
+;;   (interactive)
+
+;;   (cider-interactive-eval "(tap> *1)")
+;;   (shell-command "i3-msg '[title=\"Flowstorm debugger\"] scratchpad show'"))
+
+;; (define-key clojure-mode-map (kbd "<f5>") 'clojure-dev-menu-show)
+;; (define-key cider-repl-mode-map (kbd "<f5>") 'clojure-dev-menu-show)
+;; (define-key clojure-mode-map (kbd "<f6>") 'my-clojure-dev-tools/body)
+;;(define-key cider-flow-storm-map (kbd "C-c C-f t") 'cider-tap-last-and-show-debugger)
+  #+end_src
+** Other
+*** Prettyfy
+  #+begin_src emacs-lisp
+  (defun my-pretty-unicode ()
+    "make some word or string show as pretty Unicode symbols"
+    (setq prettify-symbols-alist
+	  '(
+	    ("#+begin_src" . ?Ξ) 
+	    ("#+end_src" . ?Ξ) 
+	    ("#+BEGIN_SRC" . ?Ξ) 
+	    ("#+END_SRC" . ?Ξ)
+	    (":PROPERTIES:" .?⚙)
+	    (":END:" .?☝)
+	    )))
+
+  (add-hook 'org-mode-hook 'my-pretty-unicode)
+  (global-prettify-symbols-mode 1)
+  #+end_src
+
+*** SRC block colors
+    #+begin_src emacs-lisp
+
+    ;; (custom-set-faces
+    ;;  '(org-block-begin-line
+    ;;    ((t (:underline "#333333" :foreground "#93BF6C" :background "#000000"))))
+    ;;  '(org-block
+    ;;    ((t (:background "#111111"))))
+    ;;  '(org-block-end-line
+    ;;    ((t (:overline "#333333" :foreground "#93BF6C" :background "#000000"))))) 
+
+    #+end_src
+
+*** Timer in buffer
+    #+begin_src emacs-lisp
+    (defun countdown-start()
+      "Starts the org-countdown in a buffer"
+      (interactive)
+      (switch-to-buffer "countdown")
+      (countdown-mode)
+      (display-timer-in-buffer))
+
+    (defun refresh-in-buffer-timer ()
+      (if (boundp 'org-timer-countdown-timer)
+	  (if org-timer-countdown-timer
+	      (with-current-buffer (get-buffer "countdown")
+		(let ((inhibit-read-only t))
+		  (erase-buffer)
+		  (insert (concat (org-timer-value-string) "\n")))))))
+
+    (defun kill-timer-buffer ()
+      "Kills timer buffer"
+      (interactive)
+      (progn
+	(cancel-function-timers 'refresh-in-buffer-timer)
+	(kill-buffer "countdown")))
+
+    (defun display-timer-in-buffer()
+      "Displays the clock"
+      (cancel-function-timers 'refresh-countdown-timer)
+      (run-at-time t 0.2 #'refresh-in-buffer-timer))
+
+    (define-derived-mode countdown-mode org-mode "countdown"
+      (progn
+	(define-key countdown-mode-map (kbd "C-x k") 'kill-timer-buffer)
+	(define-key countdown-mode-map (kbd "C-c C-x ;") 'org-timer-set-timer)
+	(define-key countdown-mode-map (kbd "C-c C-x _") 'org-timer-stop)
+	(define-key countdown-mode-map (kbd "C-c C-x ,") 'org-timer-pause-or-continue)))
+
+    ;;(countdown-start)
+    ;;(list-timers)
+
+
+    (global-set-key (kbd "C-c C-x M-c") 'countdown-start)
+
+    #+end_src
+
+*** Timer gong
+    #+begin_src emacs-lisp
+    (setq org-clock-sound "~/.config/emacs/Bell.m4a") 
+    #+end_src
+** Dired
+  Dired makes an Emacs buffer containing a listing of a directory, and optionally some of its subdirectories as well. You can use the normal Emacs commands to move around in this buffer, and special Dired commands to operate on the listed files. Dired works with both local and remote directories.
+
+  The Dired buffer is normally read-only, and inserting text in it is not allowed (however, the Wdired mode allows that, see Wdired). Ordinary printing characters such as d and x are redefined for special Dired commands. Some Dired commands mark or flag the current file (that is, the file on the current line); other commands operate on the marked files or on the flagged files. You first mark certain files in order to operate on all of them with one command. 
+*** Settings
+
+
+
+    #+begin_src emacs-lisp
+      (when (not (eq system-type 'darwin))
+      (use-package dired
+	:ensure nil
+	:commands (dired dired-jump)
+	:custom (dired-dwim-target t)
+	:bind (("C-x C-j" . dired-jump))
+	:config  (define-key dired-mode-map (kbd "b") 'dired-up-directory)
+	(define-key dired-mode-map (kbd "l") 'dired-find-file)))
+
+      ;; (use-package all-the-icons-dired
+      ;;   :straight t
+      ;;   :hook (dired-mode . all-the-icons-dired-mode))
+	#+end_src
+*** Handle hidden files
+    #+begin_src emacs-lisp
+    (use-package dired-hide-dotfiles
+      :straight t
+      :hook (dired-mode . dired-hide-dotfiles-mode)
+      :config
+      ;;(evil-collection-define-key 'normal 'dired-mode-map
+      ;;  "H" 'dired-hide-dotfiles-mode)
+    )
+	#+end_src
+*** pcre2el Regex Syntax Converter
+    `pcre2el' or `rxt' (RegeXp Translator or RegeXp Tools) is a utility for working with regular expressions in Emacs, based on a recursive-descent parser for regexp syntax. In addition to converting (a subset of) PCRE syntax into its Emacs equivalent, it can do the following:
+
+    #+begin_src emacs-lisp
+
+
+    (use-package pcre2el
+      :straight t 
+      :init)
+
+    #+end_src
+*** Dired Plus
+    Dired+ (library dired+.el) extends functionalities provided by standard GNU Emacs libraries dired.el, dired-aux.el, and dired-x.el. The standard functions are all available, plus many more.
+
+    Currently not on melpa, downloading and installing it from emacswiki "manually"
+
+    #+begin_src emacs-lisp
+
+
+
+    ;; (use-package dired+
+    ;;   ;;:straight t 
+    ;;   :quelpa (dired+ :fetcher github :repo "emacsmirror/dired-plus"))
+
+
+    ;; (require 'url)
+    ;; (if (file-exists-p "~/.emacs.d/manual-packages/dired+.el")
+    ;;     nil
+    ;;   (condition-case nil
+    ;;       (url-copy-file "https://www.emacswiki.org/emacs/download/dired%2b.el" "~/.emacs.d/manual-packages/dired+.el")
+    ;;     ((debug error) nil)))
+
+
+
+
+    ;; (load "dired+")
+
+    #+end_src
+
+*** Dired Narrow
+    This package provides live filtering of files in dired buffers.  In general, after calling the respective narrowing function you type a filter string into the minibuffer.  After each change the changes automatically reflect in the buffer.  Typing C-g will cancel the narrowing and restore the original view, typing RET will exit the live filtering mode and leave the dired buffer in the narrowed state.  To bring it back to the original view, you can call `revert-buffer' (usually bound to `g').
+    #+begin_src emacs-lisp  
+    ;;narrow dired to match filter
+    (use-package dired-narrow
+      :straight t 
+      :bind (:map dired-mode-map
+		  ("/" . dired-narrow)))
+
+    #+end_src
+
+*** Dired Subtree
+    #+begin_src emacs-lisp  
+    ;;narrow dired to match filter
+    (use-package dired-subtree
+      :straight t 
+      :after dired
+      :config
+      (bind-key "<tab>" 'dired-subtree-toggle dired-mode-map)
+      (bind-key "<backtab>" 'dired-subtree-cycle dired-mode-map))
+
+    #+end_src
+    (message "End ")
+
+** Prettier
+  manual
+  #+begin_src emacs-lisp 
+
+
+  (add-to-list 'load-path "~/.emacs.d/manual-packages/")
+
+  #+end_src
+
+** Modes and packages
+*** Try
+    #+begin_src emacs-lisp 
+
+
+    (use-package try
+      :straight t 
+      :init)
+    #+end_src
+
+*** Diminish
+    "When we diminish a mode, we are saying we want it to continue doing its work for us, but we no longer want to be reminded of it. It becomes a night worker, like a janitor; it becomes an invisible man; it remains a component, perhaps an important one, sometimes an indispensable one, of the mechanism that maintains the day-people's world, but its place in their thoughts is diminished, usually to nothing. As we grow old we diminish more and more such thoughts, such people, usually to nothing." -- Will Mengarini
+
+    This package implements hiding or abbreviation of the mode line displays (lighters) of minor-modes.
+    #+begin_src emacs-lisp
+    (use-package diminish
+      :straight t )
+    #+end_src
+
+*** Quelpa
+    Your personal local Emacs Lisp Package Archive (ELPA) with packages built on-the-fly directly from source.
+    #+begin_src emacs-lisp
+    ;; (use-package quelpa
+    ;;  :straight t 
+    ;;  :init)
+
+    #+end_src
+
+*** Wgrep
+    Your personal local Emacs Lisp Package Archive (ELPA) with packages built on-the-fly directly from source.
+    #+begin_src emacs-lisp
+    (use-package wgrep
+      :straight t
+      :custom
+      (wgrep-enable-key "e")
+      (wgrep-auto-save-buffer t)
+      (wgrep-change-readonly-file t))
+
+    #+end_src
+
+*** Ag
+    Your personal local Emacs Lisp Package Archive (ELPA) with packages built on-the-fly directly from source.
+    #+begin_src emacs-lisp
+      (use-package wgrep-ag
+	:straight t 
+	:after ag)
+
+      (use-package ag
+        :straight t
+        :custom
+        (ag-highligh-search t)
+        (ag-reuse-buffers t)
+        (ag-reuse-window t)
+        :bind
+        ("s-s p" . ag-project)
+        ("s-s d" . ag-dired))
+
+*** Rg
+    #+begin_src emacs-lisp
+    (use-package rg
+      :straight t 
+      :after wgrep
+      :config
+      (setq rg-group-result t)
+      (setq rg-hide-command t)
+      (setq rg-show-columns nil)
+      (setq rg-show-header t)
+      (setq rg-custom-type-aliases nil)
+      (setq rg-default-alias-fallback "all")
+
+      (rg-define-search prot/grep-vc-or-dir
+	:query ask
+	:format regexp
+	:files "everything"
+	:dir (let ((pr (projectile-project-root)))
+	       (if pr
+		   pr                         ; search root project dir
+		 default-directory))          ; or from the current dir
+	:confirm prefix
+	:flags ("--hidden -g !.git"))
+
+      ;;   (defun prot/rg-save-search-as-name ()
+      ;;     "Save `rg' buffer, naming it after the current search query.
+
+      ;; This function is meant to be mapped to a key in `rg-mode-map'."
+      ;;     (interactive)
+      ;;     (let ((pattern (car rg-pattern-history)))
+      ;;       (rg-save-search-as-name (concat "«" pattern "»"))))
+
+      :bind (("M-s g" . prot/grep-vc-or-dir)
+	     :map rg-mode-map
+	     ;;("s" . prot/rg-save-search-as-name)
+	     ("C-n" . next-line)
+	     ("C-p" . previous-line)
+	     ("M-n" . rg-next-file)
+	     ("M-p" . rg-prev-file))
+      )
+    #+end_src
+*** Projectile
+    #+begin_src emacs-lisp
+      ;; projectile
+      (use-package projectile
+	:diminish projectile-mode
+	:config (projectile-mode)
+	:custom ((projectile-completion-system 'ivy))
+	:bind-keymap
+	("C-c p" . projectile-command-map)
+	:init
+	;; NOTE: Set this to the folder where you keep your Git repos!
+	(when (file-directory-p "~/projects")
+	  (setq projectile-project-search-path '("~/projects")))
+	(setq projectile-switch-project-action #'projectile-dired))
+
+      ;; (use-package projectile
+      ;;   :straight t 
+      ;;   :config
+      ;;   (projectile-global-mode)
+      ;;   ;;  (setq projectile-completion-system 'ivy)
+      ;;   )
+
+      (use-package counsel-projectile
+	:straight t 
+	:config
+	;;(counsel-projectile-on)
+	)
+      ;;(define-key projectile-mode-map (kbd "C-c s-p") 'projectile-command-map)
+      (define-key projectile-mode-map (kbd "C-c p") 'projectile-command-map)
+    #+end_src
+  *** Dumb jump
+    #+begin_src emacs-lisp
+    (use-package dumb-jump
+      :bind (("M-g o" . dumb-jump-go-other-window)
+	     ("M-g j" . dumb-jump-go)
+	     ("M-g x" . dumb-jump-go-prefer-external)
+	     ("M-g z" . dumb-jump-go-prefer-external-other-window))
+      :config ;;(setq dumb-jump-selector 'ivy) ;;
+      (setq dumb-jump-selector 'helm)
+      :straight t)
+
+    #+end_src
+
+
+** Various
+  *** Nov Mode (epub)
+    nov.el provides a major mode for reading EPUB documents.
+
+    Features:
+      - Basic navigation (jump to TOC, previous/next chapter)
+      - Remembering and restoring the last read position
+      - Jump to next chapter when scrolling beyond end
+      - Renders EPUB2 (.ncx) and EPUB3 (<nav>) TOCs
+      - Hyperlinks to internal and external targets
+      - Supports textual and image documents
+      - View source of document files
+      - Metadata display
+      - Image rescaling
+
+	#+begin_src emacs-lisp
+
+
+    (use-package nov 
+      :straight t 
+      :config
+      (setq  nov-variable-pitch nil)
+      (add-to-list 'auto-mode-alist '("\\.epub\\'" . nov-mode)
+		   ))
+
+	#+end_src
+
+
+      #+begin_src emacs-lisp
+    ;; (use-package ereader
+    ;;   :straight t 
+    ;;   :config 
+    ;;   ;; (add-to-list 'auto-mode-alist '("\\.epub\\'" . nov-mode))
+    ;; )
+      #+end_src
+
+  *** Engine mode (search engines)
+    #+begin_src emacs-lisp
+    (use-package engine-mode
+      :straight t 
+      :config
+      (progn
+	(engine-mode t)
+	(setq engine/browser-function 'eww-browse-url)
+	(defengine amazon
+	  "http://www.amazon.com/s/ref=nb_sb_noss?url=search-alias%3Daps&field-keywords=%s")
+
+	(defengine duckduckgo
+	  "https://duckduckgo.com/?q=%s"
+	  :keybinding "d")
+
+	(defengine github
+	  "https://github.com/search?ref=simplesearch&q=%s"
+	  :keybinding "b")
+
+
+	(defengine google
+	  "http://www.google.com/search?ie=utf-8&oe=utf-8&q=%s"
+	  :keybinding "g")
+
+	(defengine google-past-year
+	  "http://www.google.com/search?ie=utf-8&oe=utf-8&q=%s&tbs=qdr:y"
+	  :keybinding "y")
+
+	(defengine google-images
+	  "http://www.google.com/images?hl=en&source=hp&biw=1440&bih=795&gbv=2&aq=f&aqi=&aql=&oq=&q=%s")
+
+	(defengine google-maps
+	  "http://maps.google.com/maps?q=%s"
+	  :browser 'browse-url-firefox
+	  :docstring "Mappin' it up."
+	  :keybinding "a")
+
+
+	(defengine project-gutenberg
+	  "http://www.gutenberg.org/ebooks/search/?query=%s"
+	  :keybinding "p")
+
+
+	(defengine rfcs
+	  "http://pretty-rfc.herokuapp.com/search?q=%s")
+
+	(defengine stack-overflow
+	  "https://stackoverflow.com/search?q=%s"
+	  :keybinding "s")
+
+	(defengine ecosia
+	  "https://www.ecosia.org/search?q=%s"
+	  :keybinding "e")
+
+
+	(defengine twitter
+	  "https://twitter.com/search?q=%s"
+	  :keybinding "t")
+
+
+	(defengine wikipedia
+	  "http://www.wikipedia.org/search-redirect.php?language=en&go=Go&search=%s"
+	  :keybinding "w"
+	  :docstring "Searchin' the wikis.")
+
+	(defengine wiktionary
+	  "https://www.wikipedia.org/search-redirect.php?family=wiktionary&language=en&go=Go&search=%s")
+
+	(defengine wolfram-alpha
+	  "http://www.wolframalpha.com/input/?i=%s")
+
+	(defengine youtube
+	  "http://www.youtube.com/results?aq=f&oq=&search_query=%s"
+	  :browser 'browse-url-firefox
+	  :keybinding "y")
+
+	(defengine melpa
+	  "https://melpa.org/#/?q=%s"
+	  :browser 'browse-url-firefox
+	  :keybinding "m")
+
+	(defengine bookfi
+	  "http://en.bookfi.net/s/?q=%s"
+	  :browser 'browse-url-firefox
+	  :keybinding "k")
+
+	))
+
+    #+end_src
+
+    #+RESULTS:
+    : t
+
+  *** Multiple Cursors
+    #+begin_src emacs-lisp
+    (use-package multiple-cursors
+      :straight t
+      :bind (
+	     ("C-S-c C-S-c" . mc/edit-lines)
+	     ("C->" . mc/mark-next-like-this)
+	     ("C-<" . mc/mark-previous-like-this)
+	     ("C-c C-<" . mc/mark-all-like-this)
+	     ("C-S-<mouse-1>" . mc/add-cursor-on-click))
+      :bind (:map region-bindings-mode-map
+		  ("a" . mc/mark-all-like-this)
+		  ("p" . mc/mark-previous-like-this)
+		  ("n" . mc/mark-next-like-this)
+		  ("P" . mc/unmark-previous-like-this)
+		  ("N" . mc/unmark-next-like-this)
+		  ("[" . mc/cycle-backward)
+		  ("]" . mc/cycle-forward)
+		  ("m" . mc/mark-more-like-this-extended)
+		  ("h" . mc-hide-unmatched-lines-mode)
+		  ("\\" . mc/vertical-align-with-space)
+		  ("#" . mc/insert-numbers) ; use num prefix to set the starting number
+		  ("^" . mc/edit-beginnings-of-lines)
+		  ("$" . mc/edit-ends-of-lines))
+      :init
+      (progn
+	;; Temporary hack to get around bug # 28524 in emacs 26+
+	;; https://debbugs.gnu.org/cgi/bugreport.cgi?bug=28524
+	(setq mc/mode-line
+	      `(" mc:" (:eval (format ,(propertize "%-2d" 'face 'font-lock-warning-face)
+				      (mc/num-cursors)))))
+
+	(setq mc/list-file (locate-user-emacs-file "mc-lists"))
+
+	;; Disable the annoying sluggish matching paren blinks for all cursors
+	;; when you happen to type a ")" or "}" at all cursor locations.
+	(defvar modi/mc-blink-matching-paren--store nil
+	  "Internal variable used to restore the value of `blink-matching-paren'
+    after `multiple-cursors-mode' is quit.")
+
+	;; The `multiple-cursors-mode-enabled-hook' and
+	;; `multiple-cursors-mode-disabled-hook' are run in the
+	;; `multiple-cursors-mode' minor mode definition, but they are not declared
+	;; (not `defvar'd). So do that first before using `add-hook'.
+	(defvar multiple-cursors-mode-enabled-hook nil
+	  "Hook that is run after `multiple-cursors-mode' is enabled.")
+	(defvar multiple-cursors-mode-disabed-hook nil
+	  "Hook that is run after `multiple-cursors-mode' is disabled.")
+
+	(defun modi/mc-when-enabled ()
+	  "Function to be added to `multiple-cursors-mode-enabled-hook'."
+	  (setq modi/mc-blink-matching-paren--store blink-matching-paren)
+	  (setq blink-matching-paren nil))
+
+	(defun modi/mc-when-disabled ()
+	  "Function to be added to `multiple-cursors-mode-disabled-hook'."
+	  (setq blink-matching-paren modi/mc-blink-matching-paren--store))
+
+	(add-hook 'multiple-cursors-mode-enabled-hook #'modi/mc-when-enabled)
+	(add-hook 'multiple-cursors-mode-disabled-hook #'modi/mc-when-disabled)))
+
+    (provide 'setup-multiple-cursors)
+
+    ;; * Mark one more occurrence
+    ;;
+
+    #+end_src
+  *** PDF tools
+
+    PDF Tools is, among other things, a replacement of DocView for PDF files. The key difference is that pages are not pre-rendered by e.g. ghostscript and stored in the file-system, but rather created on-demand and stored in memory.
+
+    This rendering is performed by a special library named, for whatever reason, poppler, running inside a server program. This program is called epdfinfo and its job is to successively read requests from Emacs and produce the proper results, i.e. the PNG image of a PDF page.
+
+    Actually, displaying PDF files is just one part of PDF Tools. Since poppler can provide us with all kinds of information about a document and is also able to modify it, there is a lot more we can do with it.
+
+    Note depends on a number of libraries installed. On nixos compile epdfinfo, that is necessary for it to work, go into nix-shell with `sudo nix-shell -p autoconf automake libpng zlib poppler pkgconfig gcc` and open emacs from nix-shel and let the compilation run there.
+
+    #+begin_src emacs-lisp  
+    ;; (use-package image+
+    ;;   :straight t 
+    ;;   :commands (imagex-global-sticky-mode imagex-auto-adjust-mode)
+    ;;   :init (progn (imagex-global-sticky-mode) (imagex-auto-adjust-mode)))
+
+    ;; (use-package pdf-tools
+    ;;   ;; :straight t 
+    ;;   :mode "\\.pdf$"
+    ;;   :config
+    ;;   (pdf-tools-install)
+    ;;   (setq-default pdf-view-midnight-colors '("#ffffff" . "#2d2a2e"))
+    ;;   (setq pdf-annot-default-text-annotation-properties
+    ;; 	    '((color . "#ff0000")))
+    ;;   (setq pdf-annot-default-markup-annotation-properties
+    ;; 	    '((color . "#ff0000")))
+
+    ;;   (add-hook 'pdf-view-mode-hook (lambda ()
+    ;; 				      (pdf-view-midnight-minor-mode))) ; automatically turns on midnight-mode for pdfs
+
+    ;;   (setq-default pdf-view-display-size 'fit-page)
+    ;;   (bind-keys :map pdf-view-mode-mapf
+    ;; 		 ;; ("\\" . hydra-pdftools/body)
+    ;; 		 ;; ("<s-spc>" .  pdf-view-scroll-down-or-next-page)
+    ;; 		 ;; ("g"  . pdf-view-first-page)
+    ;; 		 ;; ("G"  . pdf-view-last-page)
+    ;; 		 ;; ("l"  . image-forward-hscroll)
+    ;; 		 ;; ("h"  . image-backward-hscroll)
+    ;; 		 ;; ("j"  . pdf-view-next-page)
+    ;; 		 ;; ("k"  . pdf-view-previous-page)
+    ;; 		 ;; ("e"  . pdf-view-goto-page)
+    ;; 		 ;; ("u"  . pdf-view-revert-buffer)
+    ;; 		 ;; ("al" . pdf-annot-list-annotations)
+    ;; 		 ;; ("ad" . pdf-annot-delete)
+    ;; 		 ;; ("aa" . pdf-annot-attachment-dired)
+    ;; 		 ;; ("am" . pdf-annot-add-markup-annotation)
+    ;; 		 ;; ("at" . pdf-annot-add-text-annotation)
+    ;; 		 ;; ("y"  . pdf-view-kill-ring-save)
+    ;; 		 ;; ("i"  . pdf-misc-display-metadata)
+    ;; 		 ;; ("s"  . pdf-occur)
+    ;; 		 ;; ("b"  . pdf-view-set-slice-from-bounding-box)
+    ;; 		 ;; ("r"  . pdf-view-reset-slice)
+    ;; 		 ))
+
+    ;; (use-package org-pdfview
+    ;;   :straight t  jgx)
+
+
+
+
+
+    #+end_src
+
+**** Custom variables
+    custom-set-variables was added by Custom.
+    If you edit it by hand, you could mess it up, so be careful.
+    Your init file should contain only one such instance.
+    If there is more than one, they won't work right.
+
+    #+begin_src emacs-lisp
+    (custom-set-variables
+     '(ansi-color-names-vector
+       ["#000000" "#8b0000" "#1ca28a" "#FFB397" "#7b68ee" "#dc8cc3" "#93e0e3" "#dcdccc"])
+     '(package-selected-packages
+       (quote
+	(
+	 ;;pdf-tools
+         markdown-modea poly-R poly-markdown org-trello fill-column-indicator fill-column-manager htmlize quelpa org-plus-contrib ox-reveal rainbow-mode ox-gfm org-caldav org-gcal minimap zoom-frm 4clojure aggressive-indent buffer-move rainbow-delimiters cyberpunk-theme magit company clj-refactor cider use-package)))
+
+     '(send-mail-function (quote mailclient-send-it)))
+    #+end_src
+
+**** Custom face
+    s
+    custom-set-faces was added by Custom.
+    If you edit it by hand, you could mess it up, so be careful.
+    Your init file should contain only one such instance.
+    ;If there is more than one, they won't work right.
+    #+begin_src emacs-lisp
+    (custom-set-faces
+     '(minimap-active-region-background ((t (:background "#111111"))))
+     '(minimap-font-face ((t (:height 6 :family "RobotoMono Nerd Font")))))
+
+    #+end_src
+
+    **** No backups
+    #+begin_src emacs-lisp
+    (setq make-backup-files t) ; stop creating backup~ files
+    (setq auto-save-default t) ; stop creating #autosave# files
+    #+end_src
+
+    **** End initialisations
+    #+begin_src emacs-lisp
+    ;;(pdf-tools-install)
+
+    (eval-after-load 'image+ '(imagex-global-sticky-mode 1))
+
+    (find-file "~/notes/doing-shit/tasks.org")
+
+
+
+    #+end_src
+  *** Eshell history definitions
+    #+begin_src emacs-lisp
+    (setq eshell-history-size 1000000
+	  eshell-directory-name "~/.emacs.d/eshell")
+
+    #+end_src
+
+  *** Copy lines with C/M-y
+    Copy lines (as many as prefix argument) in the kill ring.
+    Ease of use features:
+      - Move to start of next line.
+      - Appends the copy on sequential calls.
+      - Use newline as last char even on the last line of the buffer.
+      - If region is active, copy its lines.
+
+	#+begin_src emacs-lisp
+    (defun copy-line (arg)
+      "Copy lines (as many as prefix argument) in the kill ring.
+      Ease of use features:
+      - Move to start of next line.
+      - Appends the copy on sequential calls.
+      - Use newline as last char even on the last line of the buffer.
+      - If region is active, copy its lines."
+      (interactive "p")
+      (let ((beg (line-beginning-position))
+	    (end (line-end-position arg)))
+	(when mark-active
+	  (if (> (point) (mark))
+	      (setq beg (save-excursion (goto-char (mark)) (line-beginning-position)))
+	    (setq end (save-excursion (goto-char (mark)) (line-end-position)))))
+	(if (eq last-command 'copy-line)
+	    (kill-append (buffer-substring beg end) (< end beg))
+	  (kill-ring-save beg end)))
+      (kill-append "\n" nil)
+      (beginning-of-line (or (and arg (1+ arg)) 2))
+      (if (and arg (not (= 1 arg))) (message "%d lines copied" arg)))
+
+    (global-set-key (kbd "C-M-y") 'copy-line)
+
+
+    (add-to-list 'custom-theme-load-path "~/.config/emacs/my-themes/")
+    (load-theme 'dark-8-bit-sheep t)
+
+	#+end_src
+
+** Tempstuff
+
+  #+begin_src emacs-lisp
+(use-package plantuml-mode
+  :straight t)
+
+(progn
+  (define-key input-decode-map [?\C-i] [C-i])
+  (global-set-key (kbd "<C-i>") 'indent-region))
+
+(use-package lsp-mode
+  :straight t
+  :init
+  ;; set prefix for lsp-command-keymap (few alternatives - "C-l", "C-c l")
+  (setq lsp-keymap-prefix "s-l")
+  :hook (;; replace XXX-mode with concrete major-mode(e. g. python-mode)
+	 (clojure-mode . lsp)
+	 ;; if you want which-key integration
+	 (lsp-mode . lsp-enable-which-key-integration))
+  :config (setq lsp-completion-enable-additional-text-edit nil
+		lsp-ui-sideline-enable nil
+		lsp-enable-indentiation nil)
+  (add-hook 'cider-mode-hook (lambda () (remove-hook 'completion-at-point-functions #'cider-complete-at-point)))
+  :commands lsp)
+
+
+(use-package smart-compile
+  :straight t)
+
+(use-package java-snippets
+  :straight t)
+
+(use-package flycheck-gradle
+  :commands (flycheck-gradle-setup)
+  :init
+  (mapc
+   (lambda (x)
+     (add-hook x #'flycheck-gradle-setup))
+   '(java-mode-hook kotlin-mode-hook)))
+
+
+
+(use-package ant :straight t)
+(use-package mvn :straight t)
+
+;; mvn -Dmaven.test.skip=true package
+(use-package lsp-java
+  :straight t
+  :after lsp-mode
+  :config
+  (require 'lsp-java-boot)
+
+  ;; to enable the lenses
+  (add-hook 'lsp-mode-hook #'lsp-lens-mode)
+  (add-hook 'java-mode-hook #'lsp-java-lens-mode)
+  )
+
+(use-package groovy-mode
+  :straight t)
+
+(defun srk/maven-create-project ()
+  "Tidies the HTML content in the buffer using `tidy'"
+  (interactive)
+  (let ((org-name (read-string "Name of the package? "))
+	(name (read-string "Name of the project? "))
+	)
+    (shell-command (concat "mvn archetype:generate -DgroupId=" org-name " -DartifactId=" name " -DarchetypeArtifactId=maven-archetype-simple -DarchetypeVersion=1.4 -DinteractiveMode=false"))))
+
+(use-package embark
+  :straight t
+  :bind
+  (("C-." . embark-act)
+   ("M-." . embark-dwim)
+   ("C-h B" . embark-bindings))
+  :init
+  (setq prefix-help-command #'embark-prefix-help-command))
+
+
+
+(when (not (eq system-type 'darwin))
+  (use-package fira-code-mode 
+    :straight t
+    :config (fira-code-mode-set-font)
+    :custom (fira-code-mode-disabled-ligatures '("[]" "#{" "#(" "#_" "#_(" "x")) ;; List of ligatures to turn off
+    :hook prog-mode))
+
+(setq-default mode-line-format
+	      (list "%e"
+		    mode-line-front-space
+		    "||||| "
+		    (if (eq system-type 'darwin)
+			'(:eval (shell-command-to-string
+				 "defaults read ~/Library/Preferences/com.apple.HIToolbox.plist AppleSelectedInputSources | command rg -e '\"KeyboardLayout Name\" = \"([^\"]*)\"' --replace '$1' --only-matching --color never | tr -d '\n'"))
+		      '(:eval (upcase (shell-command-to-string "xkblayout-state print \"%s\"" ))))
+		    " kbd |||||      "
+		    mode-line-position
+		    mode-line-frame-identification
+		    mode-line-buffer-identification
+		    " "
+		    "   "
+		    '(vc-mode vc-mode)
+		    "  "
+		    ;;mode-line-modes
+		    mode-line-misc-info
+		    mode-line-end-spaces
+		    "     "
+		    '(:eval (srk/slack-get-user-emoji "Sami Kallinen"))
+
+		    ))
+
+(run-with-timer 0 1 #'(lambda () (force-mode-line-update t)))
+
+(column-number-mode 1)
+
+;;  (global-set-key (kbd "C-x C-b") 'persp-ibuffer)
+
+(defun my-clojure-mode-hook ()
+  (hs-minor-mode)
+  (local-set-key (kbd "<backtab>") 'hs-show-all) ;; ctrl+shift+=
+  ;;(local-set-key (kbd "C-S-<tab>") 'hs-hide-all)   ;; ctrl+shift+-
+  (local-set-key (kbd "<tab>") 'hs-toggle-hiding))
+
+(global-set-key (kbd "C-S-<tab>") 'hs-hide-all)   ;; ctrl+shift+-
+
+(add-hook 'clojure-mode-hook 'my-clojure-mode-hook)
+
+(use-package websocket
+  :straight t
+  :after org-roam)
+
+
+
+(defun srk/get-project-root ()
+  (when (fboundp 'projectile-project-root)
+    (projectile-project-root)))
+
+(use-package consult
+  :straight t
+  :demand t
+  :custom
+  (consult-project-root-function #'srk/get-project-root)
+  ;; Replace bindings. Lazily loaded due by `use-package'.
+  :bind (;; C-c bindings (mode-specific-map)
+	 ;; ("C-c h" . consult-history)
+	 ;; ("C-c m" . consult-mode-command)
+	 ;; ("C-c b" . consult-bookmark)
+	 ;; ("C-c k" . consult-kmacro)
+	 ;; ;; C-x bindings (ctl-x-map)
+	 ;; ("C-x M-:" . consult-complex-command)     ;; orig. repeat-complex-command
+	 ;;("s-s b" . consult-buffer)                ;; orig. switch-to-buffer
+	 ;; ("C-x 4 b" . consult-buffer-other-window) ;; orig. switch-to-buffer-other-window
+	 ;; ("C-x 5 b" . consult-buffer-other-frame)  ;; orig. switch-to-buffer-other-frame
+	 ;; ;; Custom M-# bindings for fast register access
+	 ;; ("M-#" . consult-register-load)
+	 ;; ("M-'" . consult-register-store)          ;; orig. abbrev-prefix-mark (unrelated)
+	 ;; ("C-M-#" . consult-register)
+	 ;; ;; Other custom bindings
+	 ;; ("M-y" . consult-yank-pop)                ;; orig. yank-pop
+	 ;; ("<help> a" . consult-apropos)            ;; orig. apropos-command
+	 ;; ;; M-g bindings (goto-map)
+	 ;; ("M-g e" . consult-compile-error)
+	 ;; ("M-g f" . consult-flymake)               ;; Alternative: consult-flycheck
+	 ;; ("M-g g" . consult-goto-line)             ;; orig. goto-line
+	 ;; ("M-g M-g" . consult-goto-line)           ;; orig. goto-line
+	 ;; ("M-g o" . consult-outline)               ;; Alternative: consult-org-heading
+	 ;; ("M-g m" . consult-mark)
+	 ;; ("M-g k" . consult-global-mark)
+	 ;; ("M-g i" . consult-imenu)
+	 ;; ("M-g I" . consult-imenu-multi)
+	 ;; ;; M-s bindings (search-map)
+	 ("s-s f" . consult-find)
+	 ("s-s F" . consult-locate)
+	 ("s-s g" . consult-grep)
+	 ("s-s G" . consult-git-grep)
+	 ("s-s r" . consult-ripgrep)
+	 ("s-s l" . consult-line)
+	 ("s-s L" . consult-line-multi)
+	 ("s-s m" . consult-multi-occur)
+	 ("s-s k" . consult-keep-lines)
+	 ("s-s u" . consult-focus-lines)
+	 ;; ;; Isearch integration
+	 ;; ("M-s e" . consult-isearch-history)
+	 ;; :map isearch-mode-map
+	 ;; ("M-e" . consult-isearch-history)         ;; orig. isearch-edit-string
+	 ;; ("M-s e" . consult-isearch-history)       ;; orig. isearch-edit-string
+	 ;; ("M-s l" . consult-line)                  ;; needed by consult-line to detect isearch
+	 ;; ("M-s L" . consult-line-multi)           ;; needed by consult-line to detect isearch
+	 ))
+
+
+(defun my-clj-format-before-save-hook ()
+  (when (eq major-mode 'clojure-mode)
+    (progn
+      (message "Formatting buffer!")
+      ;;(lsp-format-buffer)
+      )))
+
+(add-hook 'before-save-hook #'my-clj-format-before-save-hook)
+
+;;  (global-set-key (kbd "C-x C-b") 'persp-ibuffer)
+
+
+(vc-mode vc-mode)
+(setq auto-revert-check-vc-info nil)
+
+(use-package expand-region
+  :straight t
+  :bind ("C-=" . er/expand-region))
+
+(setq linum-format "%3d ")
+
+(use-package html-to-hiccup
+  :straight t)
+
+(set-face-attribute 'default nil :family "RobotoMono Nerd Font" :height 110 :weight 'normal)
+
+
+(use-package graphviz-dot-mode
+  :straight t
+  :config
+  (add-to-list 'org-babel-load-languages '(dot . t))
+
+  ;; (org-babel-do-load-languages
+  ;;  'org-babel-load-languages
+  ;;  '((dot . t)))
+  ;;    (add-to-list 'org-src-lang-modes (quote ("dot" . graphviz-dot)))
+  )
+
+
+
+(use-package hide-mode-line
+  :straight t
+  )
+
+(defun srk/presentation-setup ()
+  ;; Hide the mode line
+  (hide-mode-line-mode 1)
+  ;;    (set-face-attribute 'variable-pitch nil :font "Helvetica" :weight 'bold)
+  ;; Display images inline
+  (org-display-inline-images) ;; Can also use org-startup-with-inline-images
+
+  ;; Scale the text.  The next line is for basic scaling:
+  (setq text-scale-mode-amount 3)
+  (text-scale-mode 1))
+
+;; This option is more advanced, allows you to scale other faces too
+;; (setq-local face-remapping-alist '((default (:height 2.0) variable-pitch)
+;;                                    (org-verbatim (:height 1.75) org-verbatim)
+;;                                    (org-block (:height 1.25) org-block))))
+
+
+(defun srk/presentation-end ()
+  ;; Show the mode line again
+  (hide-mode-line-mode 0)
+  ;;    (set-face-attribute 'variable-pitch nil :font "Helvetica" :weight 'normal)
+
+  ;; Turn off text scale mode (or use the next line if you didn't use text-scale-mode)
+  (text-scale-mode 0)
+  ;; If you use face-remapping-alist, this clears the scaling:
+  (setq-local face-remapping-alist '((default variable-pitch default)))
+  )
+
+
+
+
+(setq byte-compile-warnings '(cl-functions))
+(setq package-native-compile t)
+(setq straight--native-comp-available t)
+
+(add-to-list 'kill-emacs-query-functions
+	     (lambda ()
+	       (if (not (org-clocking-p))
+		   t
+		 (if (y-or-n-p "Clock out and save?")
+		     (with-current-buffer (marker-buffer org-clock-marker)
+		       (org-clock-out)
+		       (save-buffer)
+		       t)
+		   (message "Aborting")
+		   nil))))
+
+(use-package tracking
+  :straight t)
+
+(use-package telega
+  :straight (telega :type git :host github :repo "zevlg/telega.el" :branch "master")
+  :commands telega
+  :config
+  (setq telega-user-use-avatars nil
+	telega-server-libs-prefix "/nix/store/dlckjjwq4xzd3c1mx0lrf7x36vrd6j98-tdlib-1.8.19/" ;; ugly hack find out how to utilize nix for the path. installed it imperatively with "nix-env -f channel:nixpkgs-unstable -iA tdlib"
+	;; todo. 1. figure out how to install unstable in my config.nix 2. figure out idiomatic way of linking here to right build.
+	telega-use-docker (not(eq system-type 'darwin )) 
+	telega-use-tracking-for '(any pin unread)
+	telega-chat-use-markdown-formatting t
+	telega-emoji-use-images t
+	telega-completing-read-function #'ivy-completing-read
+	telega-msg-rainbow-title nil
+	telega-chat-fill-column 75))
+
+
+
+
+
+(use-package emms
+  :straight t
+  :init
+  (setq mpv-default-options '("--opengl-backend=x11vk")))
+
+
+(use-package mpv
+  :straight t)
+
+(use-package anki-editor
+  :straight t
+  :after org
+  :bind (:map org-mode-map
+	      ("<f12>" . anki-editor-cloze-region-auto-incr)
+	      ("<f11>" . anki-editor-cloze-region-dont-incr)
+	      ("<f10>" . anki-editor-reset-cloze-number)
+	      ("<f9>"  . anki-editor-push-tree))
+  :hook (org-capture-after-finalize . anki-editor-reset-cloze-number) ; Reset cloze-number after each capture.
+  :config
+  (setq anki-editor-create-decks t ;; Allow anki-editor to create a new deck if it doesn't exist
+	anki-editor-org-tags-as-anki-tags t)
+
+  (defun anki-editor-cloze-region-auto-incr (&optional arg)
+    "Cloze region without hint and increase card number."
+    (interactive)
+    (anki-editor-cloze-region my-anki-editor-cloze-number "")
+    (setq my-anki-editor-cloze-number (1+ my-anki-editor-cloze-number))
+    (forward-sexp))
+  (defun anki-editor-cloze-region-dont-incr (&optional arg)
+    "Cloze region without hint using the previous card number."
+    (interactive)
+    (anki-editor-cloze-region (1- my-anki-editor-cloze-number) "")
+    (forward-sexp))
+  (defun anki-editor-reset-cloze-number (&optional arg)
+    "Reset cloze number to ARG or 1"
+    (interactive)
+    (setq my-anki-editor-cloze-number (or arg 1)))
+  (defun anki-editor-push-tree ()
+    "Push all notes under a tree."
+    (interactive)
+    (anki-editor-push-notes '(4))
+    (anki-editor-reset-cloze-number))
+  ;; Initialize
+  ;; Org-capture templates
+  ;;  (setq org-my-anki-file "/home/sakalli/notes/anki.org")
+  (add-to-list 'org-capture-templates
+	       '("a" "Anki basic"
+		 entry
+		 (file+headline org-my-anki-file "Dispatch Shelf")
+		 "* %<%H:%M>   %^g\n:PROPERTIES:\n:ANKI_NOTE_TYPE: Basic\n:ANKI_DECK: Dump\n:END:\n** Front\n%?\n** Back\n%x\n"))
+  (add-to-list 'org-capture-templates
+	       '("A" "Anki cloze"
+		 entry
+		 (file+headline org-my-anki-file "Dispatch Shelf")
+		 "* %<%H:%M>   %^g\n:PROPERTIES:\n:ANKI_NOTE_TYPE: Cloze\n:ANKI_DECK: Dump\n:END:\n** Text\n%x\n** Extra\n"))
+  (anki-editor-reset-cloze-number))
+
+;; Allow Emacs to access content from clipboard.
+(setq x-select-enable-clipboard t
+      x-select-enable-primary t)
+
+;; org-download
+
+
+;; (define-key dired-mode-map "e" (lambda () (interactive) (eww-open-file (dired-get-file-for-visit))))
+;;  (global-set-key (kbd "s-c t") 'org-todo)
+
+
+(use-package vertico
+  :straight t
+  :init
+  (vertico-mode))
+
+(use-package savehist
+  :init (savehist-mode))
+
+(use-package marginalia
+  :straight t
+  :after vertico
+  :init (marginalia-mode))
+
+(setq org-edit-src-content-indentation 0
+      org-src-tab-acts-natively t
+      org-src-preserve-indentation t)
+
+
+
+(use-package lsp-treemacs :commands lsp-treemacs-errors-list)
+(use-package yasnippet
+  :straight t 
+  :config (yas-global-mode))
+;; (use-package hydra
+;;   :straight t)
+(use-package company
+  :straight t) 
+;; (use-package lsp-ui
+;;    :straight 
+;; (use-package dap-mode
+;;   :straight t
+;;   :after lsp-mode :config (dap-auto-configure-mode))
+;; (use-package dap-java
+;;   :straight nil)
+;; (use-package
+;;   helm-lsp
+;;   :straight t)
+;; (use-package helm
+;;   :straight t)
+
+;; optionally if you want to use debugger
+;;    (use-package dap-mode)
+;; (use-package dap-LANGUAGE) to load the dap adapter for your language
+
+;; optional if you want which-key integration
+;; (use-package which-key
+;;   :straight t
+;;   :config
+;;   (which-key-mode))
+
+(global-set-key (kbd "C-;") 'start-kbd-macro)
+(global-set-key (kbd "C-:") 'end-kbd-macro)
+
+(use-package elfeed-org
+  :straight t
+  :config
+  (elfeed-org)
+  (setq rmh-elfeed-org-files (list "~/notes/elfeed.org")))
+
+(use-package elfeed
+  :straight t
+  :config
+  (global-set-key (kbd "C-x w") 'elfeed)
+  (add-hook 'elfeed-show-mode-hook 'olivetti-mode))
+
+(use-package elfeed-goodies
+  :straight t
+  :config ;;(elfeed-goodies/setup)
+  (setq elfeed-goodies/entry-pane-position 'bottom))
+
+
+(defun elfeed-play-with-mpv ()
+  "Play entry link with mpv."
+  (interactive)
+  (let ((entry (if (eq major-mode 'elfeed-show-mode) elfeed-show-entry (elfeed-search-selected :single)))
+	(quality-arg ""))
+    (mpv-start (elfeed-entry-link entry))))
+
+(defun play-filename-as-region-with-mpv ()
+  "Play file in path marked in region."
+  (interactive)
+  (let ((entry (buffer-substring (mark) (point)))
+	)
+    (mpv-start  entry)))
+
+(setq thing-at-point-file-name-chars "-~/[:alnum:]_.${}#%,:+ ")
+
+(defun play-filename-at-point-with-mpv ()
+  "Play file at point"
+  (interactive)
+  (let ((entry (buffer-substring (mark) (point)))
+	)
+    (mpv-start  entry)))
+
+(defvar elfeed-mpv-patterns
+  '("youtu\\.?be")
+  "List of regexp to match against elfeed entry link to know
+	    whether to use mpv to visit the link.")
+
+(defun elfeed-visit-or-play-with-mpv ()
+  "Play in mpv if entry link matches `elfeed-mpv-patterns', visit otherwise.
+	    See `elfeed-play-with-mpv'."
+  (interactive)
+  (let ((entry (if (eq major-mode 'elfeed-show-mode) elfeed-show-entry (elfeed-search-selected :single)))
+	(patterns elfeed-mpv-patterns))
+    (while (and patterns (not (string-match (car elfeed-mpv-patterns) (elfeed-entry-link entry))))
+      (setq patterns (cdr patterns)))
+    (if patterns
+	(elfeed-play-with-mpv)
+      (if (eq major-mode 'elfeed-search-mode)
+	  (elfeed-search-browse-url)
+	(elfeed-show-visit)))))
+
+(use-package embrace
+  :straight t
+  :bind (("C-c e" . embrace-commander))
+  :hook (
+	 ;;(clojure-mode . embrace-emacs-lisp-mode-hook)
+	 (emacs-lisp-mode . embrace-emacs-lisp-mode-hook)))
+
+(add-to-list 'load-path "/home/sakalli/.guix-profile/share/emacs/site-lisp/")
+
+
+
+(set-face-attribute 'default nil :font "RobotoMono Nerd Font") 
+(set-face-attribute 'fixed-pitch nil :font "RobotoMono Nerd Font")
+;;    (set-face-attribute 'variable-pitch nil :font "Helvetica")
+
+
+(use-package lorem-ipsum
+  :straight t 
+  :config
+  (lorem-ipsum-use-default-bindings))
+
+;; (use-package z80-mode
+;;   :straight t 
+;;   :quelpa (z80-mode :fetcher github :repo "SuperDisk/z80-mode"))
+
+(setq browse-url-browser-function 'eww-browse-url)
+
+
+
+;; (use-package emojify
+;;   :straight t 
+;;   :hook (after-init . global-emojify-mode))
+
+(use-package olivetti
+  :straight t )
+
+(global-set-key (kbd "M-p") 'scroll-up-line)
+(global-set-key (kbd "M-n") 'scroll-down-line)
+
+;; store all backup and autosave files in the tmp dir
+(setq backup-directory-alist
+      `((".*" . ,temporary-file-directory)))
+(setq auto-save-file-name-transforms
+      `((".*" ,temporary-file-directory t)))
+(use-package dockerfile-mode :straight t )
+
+(use-package command-log-mode :straight t )
+
+(setq erc-track-exclude '("#emacs")
+      erc-track-exclude-types '("JOIN" "NICK" "QUIT" "MODE" "AWAY")
+      erc-hide-list '("JOIN" "NICK" "QUIT" "MODE" "AWAY")
+      erc-track-exclude-server-buffer t)
+
+(use-package erc-hl-nicks
+  :straight t
+  :after erc
+  :config
+  (add-to-list 'erc-modules 'hl-nicks))
+
+(use-package erc-image
+  :ensure t
+  :after erc
+  :config
+  (setq erc-image-inline-rescale 300)
+  (add-to-list 'erc-modules 'image))
+
+(defvar bitlbee-password "")
+
+
+(defun i-wanna-be-social ()
+  "Connect to IM networks using bitlbee."
+  (interactive)
+  (e<<rc :server "localhost" :port 6667 :nick "user"))
+
+(defun bitlbee-identify ()
+  "If we're on the bitlbee server, send the identify command to the 
+									 &bitlbee channel."
+  (when (and (string= "localhost" erc-session-server)
+	     (string= "&bitlbee" (buffer-name)))
+    (erc-message "PRIVMSG" (format "%s identify %s" 
+				   (erc-default-target) 
+				   bitlbee-password))))
+;; (use-package ace-jump-mode
+;;   :straight t 
+;;   :bind ("M-SPC" . ace-jump-mode))
+
+(global-set-key (kbd "M-SPC") 'avy-goto-char-timer)
+
+;;    (setq browse-url-browser-function 'browse-url-firefox)
+(setq browse-url-chrome 'google-chrome)
+
+(when (eq system-type 'darwin)
+  (use-package osx-browse
+    :straight t
+    :config
+    (osx-browse-mode 1)))
+
+(setq browse-url-browser-function 'w3m-browse-url)
+
+(add-hook 'w3-parse-hooks 'w3-tidy-page)
+
+(when (eq system-type 'darwin)
+  (defvar w3-fast-parse-tidy-program "/usr/bin/tidy"))
+
+(defun w3-tidy-page (&optional buff)
+  "Use html tidy to clean up the HTML in the current buffer."
+  (save-excursion
+    (if buff
+	(set-buffer buff)
+      (setq buff (current-buffer)))
+    (widen)
+    (call-process-region (point-min) (point-max)
+			 w3-fast-parse-tidy-program
+			 t (list buff nil) nil ;nil nil nil;
+			 "--show-warnings" "no" "--show-errors" "0" "--force-output" "yes"
+			 "-quiet" "-clean" "-bare" "-omit"
+			 "--drop-proprietary-attributes" "yes" "--hide-comments" "yes"
+			 )))
+
+;; (use-package matrix-client
+;;   :quelpa (matrix-client :fetcher github :repo "alphapapa/matrix-client.el"
+;;                          :files (:defaults "logo.png" "matrix-client-standalone.el.sh")))
+
+(setq backup-directory-alist `(("." . "~/.saves")))
+(setq backup-by-copying t)
+(setq create-lockfiles nil)
+(global-set-key (kbd "C-M-z") (lambda () (interactive) (find-file "/ssh:voyager@hubble.websink.fi:~/scicloj-fiddle/src/scicloj-fiddle/core.clj")))
+(setq mark-ring-max 6)
+(setq global-mark-ring-max 6)
+
+;; (use-package all-the-icons-dired
+;;   :straight t 
+;;   :after (all-the-icons)
+;;   :quelpa (all-the-icons-dired :fetcher github :repo "wyuenho/all-the-icons-dired" :branch "monochrome")
+;;   :if (display-graphic-p)
+;;   :hook (
+;;          (dired-collapse-mode . all-the-icons-dired-mode)
+;;          (dired-mode . all-the-icons-dired-mode)
+;;          (treemacs-mode . all-the-icons-dired-mode)))
+
+(use-package all-the-icons
+  :straight t)
+
+(use-package vscode-icon
+  :straight t 
+  :commands (vscode-icon-for-file))
+
+;; (set-face-attribute 'default nil :family "RobotoMono Nerd Font" :height 110 :weight 'normal)
+;; (set-face-attribute 'org-block nil :height 100 :inherit 'fixed-pitch)
+;; (set-face-attribute 'org-table nil :height 100 :inherit 'fixed-pitch)
+
+;;   (defun set-buffer-variable-pitch ()
+;;     (interactive)
+;;     (variable-pitch-mode t)
+;;     (setq line-spacing 3)
+;;      (set-face-attribute 'org-table nil :inherit 'fixed-pitch)
+;;      (set-face-attribute 'org-code nil :inherit 'fixed-pitch)
+;;      (set-face-attribute 'org-block nil :inherit 'fixed-pitch)
+;;      (set-face-attribute 'org-block-background nil :inherit 'fixed-pitch)
+;;     )
+
+;;   (add-hook 'org-mode-hook 'set-buffer-variable-pitch)
+;;   (add-hook 'eww-mode-hook 'set-buffer-variable-pitch)
+;;   (add-hook 'markdown-mode-hook 'set-buffer-variable-pitch)
+;;   (add-hook 'Info-mode-hook 'set-buffer-variable-pitch)v
+  #+end_src
+
+
+
+
+
+
+** Here
+  #+begin_src emacs-lisp
+(message "here")
+  #+end_src
+
